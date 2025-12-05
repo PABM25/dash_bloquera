@@ -1,0 +1,29 @@
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "dash-bloquera-ap",
+                    "appId": "1:1033660022004:android:ed4dc74e4a0a58bfecf2a1",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "dash-bloquera-ap",
+                    "configurations": {
+                        "android": "1:1033660022004:android:ed4dc74e4a0a58bfecf2a1",
+                        "ios": "1:1033660022004:ios:e8819652ed4adee4ecf2a1",
+                        "macos": "1:1033660022004:ios:e8819652ed4adee4ecf2a1",
+                        "web": "1:1033660022004:web:84741876b222b208ecf2a1",
+                        "windows": "1:1033660022004:web:28dabc0d440988c1ecf2a1"
+                    }
+                }
+            }
+        }
+    },
+    "firestore": {
+        "rules": "firestore.rules",
+        "indexes": "firestore.indexes.json"
+    }
+}

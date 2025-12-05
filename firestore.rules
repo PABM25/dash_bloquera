@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- FUNCIÓN AUXILIAR ---
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // --- REGLAS POR COLECCIÓN ---
+
+    // 1. USUARIOS:
+    match /users/{userId} {
+      allow read: if isAuthenticated(); // Cualquiera logueado puede leer usuarios (útil para ver quién creó qué)
+      allow create: if isAuthenticated() && request.auth.uid == userId; 
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 2. PRODUCTOS
+    match /productos/{productoId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 3. MOVIMIENTOS DE INVENTARIO (Solo lectura y creación)
+    match /movimientos_inventario/{movId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; 
+    }
+
+    // 4. VENTAS
+    match /ventas/{ventaId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 5. CLIENTES
+    match /clientes/{clienteId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 6. RRHH y FINANZAS (Acceso Total para cualquier usuario logueado)
+    match /trabajadores/{docId} { allow read, write: if isAuthenticated(); }
+    match /asistencias/{docId} { allow read, write: if isAuthenticated(); }
+    match /gastos/{docId} { allow read, write: if isAuthenticated(); }
+  }
+}
