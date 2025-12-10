@@ -19,22 +19,27 @@ class _MarcarAsistenciaScreenState extends State<MarcarAsistenciaScreen> {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final rh = Provider.of<RhProvider>(context, listen: false);
       
-      final usuario = auth.usuarioActual;
+      final usuario = auth.currentUser; // CORREGIDO: auth.usuarioActual -> auth.currentUser
       
       // Validación de seguridad
       if (usuario == null) throw "No hay sesión activa. Intente ingresar nuevamente.";
-      if (usuario.uid.isEmpty) throw "Error de identificación de usuario.";
-
+      
+      // CORREGIDO: La función registrarAsistencia pide argumentos posicionales, no nombrados.
+      // Firma en Provider: registrarAsistencia(String trabajadorId, String nombre, DateTime fecha, String tipoProyecto)
       await rh.registrarAsistencia(
-        trabajadorId: usuario.uid, 
-        trabajadorNombre: usuario.nombre,
-        tipo: tipo, // 'ENTRADA' o 'SALIDA'
+        usuario.uid, 
+        usuario.displayName ?? "Sin Nombre", // CORREGIDO: usuario.nombre -> displayName
+        DateTime.now(),
+        "GENERAL" // El provider pide un proyecto. Usamos "GENERAL" por defecto.
       );
+
+      // NOTA: El sistema actual en RhProvider solo permite 1 asistencia por día.
+      // Si marcas ENTRADA y luego intentas SALIDA, el provider lanzará error de duplicado.
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Marca de $tipo registrada exitosamente"),
+            content: Text("Marca ($tipo) registrada exitosamente"), // Mostramos el tipo visualmente
             backgroundColor: Colors.green,
           ),
         );

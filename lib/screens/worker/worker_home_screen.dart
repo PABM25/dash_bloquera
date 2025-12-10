@@ -1,3 +1,4 @@
+// Archivo: lib/screens/worker/worker_home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart'; 
@@ -10,13 +11,17 @@ class WorkerHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Obtenemos el usuario y su rol desde el AuthProvider
+    // 1. Obtenemos el provider
     final authProvider = Provider.of<AuthProvider>(context);
-    final user = authProvider.usuarioActual; 
     
-    // Si por alguna razón el usuario es nulo, usamos valores por defecto para evitar errores
-    final String nombre = user?.nombre ?? 'Trabajador';
-    final String rol = user?.rol ?? 'TRABAJADOR'; // 'BLOQUERO', 'VENDEDOR', 'ADMIN'
+    // 2. Obtenemos el usuario de Firebase Auth (para el nombre)
+    final user = authProvider.currentUser; 
+    
+    // 3. Obtenemos el ROL desde la variable del provider (que viene de Firestore)
+    //    Si es nulo, asumimos 'TRABAJADOR' por seguridad.
+    final String rol = authProvider.role ?? 'TRABAJADOR'; 
+
+    final String nombre = user?.displayName ?? 'Trabajador';
 
     return Scaffold(
       appBar: AppBar(
@@ -24,10 +29,7 @@ class WorkerHomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: "Cerrar Sesión",
-            onPressed: () {
-              authProvider.logout(); 
-            },
+            onPressed: () => authProvider.logout(),
           )
         ],
       ),
@@ -36,7 +38,7 @@ class WorkerHomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Botón de Asistencia (Disponible para todos)
+            // --- BOTÓN COMÚN: ASISTENCIA ---
             _buildBigButton(
               context,
               icon: Icons.access_time,
@@ -49,11 +51,11 @@ class WorkerHomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             
-            // Lógica para BLOQUERO (o Admin para pruebas)
+            // --- MENÚ PARA BLOQUEROS ---
             if (rol.toUpperCase() == 'BLOQUERO' || rol.toUpperCase() == 'ADMIN') 
               _buildBigButton(
                 context,
-                icon: Icons.grid_view, // Icono de bloque/ladrillo
+                icon: Icons.grid_view,
                 label: "REGISTRAR PRODUCCIÓN\n(Entregar Bloques)",
                 color: Colors.orange.shade700,
                 onTap: () => Navigator.push(
@@ -62,7 +64,7 @@ class WorkerHomeScreen extends StatelessWidget {
                 ),
               ),
 
-            // Lógica para VENDEDOR (o Admin para pruebas)
+            // --- MENÚ PARA VENDEDORES ---
             if (rol.toUpperCase() == 'VENDEDOR' || rol.toUpperCase() == 'ADMIN') ...[
               const SizedBox(height: 20),
               _buildBigButton(
@@ -88,7 +90,7 @@ class WorkerHomeScreen extends StatelessWidget {
       required Color color,
       required VoidCallback onTap}) {
     return SizedBox(
-      height: 100, // Altura fija para botones grandes
+      height: 100,
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
@@ -97,11 +99,7 @@ class WorkerHomeScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20),
         ),
         icon: Icon(icon, size: 40),
-        label: Text(
-          label, 
-          style: const TextStyle(fontSize: 18),
-          textAlign: TextAlign.center,
-        ),
+        label: Text(label, style: const TextStyle(fontSize: 18), textAlign: TextAlign.center),
         onPressed: onTap,
       ),
     );

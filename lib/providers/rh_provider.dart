@@ -1,20 +1,78 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart'; // Necesario para la app secundaria
 import '../models/trabajador_model.dart';
 
 
 class RhProvider with ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // --- TRABAJADORES ---
+// --- TRABAJADORES ---
   Stream<List<Trabajador>> get trabajadoresStream {
     return _db.collection('trabajadores').orderBy('nombre').snapshots().map(
       (snap) => snap.docs.map((doc) => Trabajador.fromFirestore(doc)).toList(),
     );
   }
 
+  // NUEVO: Crea usuario de Auth + Perfil de Usuario + Ficha de Trabajador
+  Future<void> crearTrabajadorConCuenta({
+    required Trabajador trabajador,
+    required String password,
+    required String rol, // 'BLOQUERO', 'VENDEDOR', 'ADMIN', 'TRABAJADOR'
+  }) async {
+    FirebaseApp? tempApp;
+    try {
+      // 1. Inicializamos una app secundaria para no cerrar la sesión del admin actual
+      tempApp = await Firebase.initializeApp(
+        name: 'registroTemporal',
+        options: Firebase.app().options,
+      );
+
+      // 2. Creamos el usuario en Auth usando esa app secundaria
+      UserCredential cred = await FirebaseAuth.instanceFor(app: tempApp)
+          .createUserWithEmailAndPassword(
+        email: trabajador.email!, // El email es obligatorio aquí
+        password: password,
+      );
+
+      String uid = cred.user!.uid;
+
+      // 3. Guardamos el Rol en la colección 'users' (Para el Login)
+      await _db.collection('users').doc(uid).set({
+        'email': trabajador.email,
+        'nombre': trabajador.nombre,
+        'role': rol,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // 4. Guardamos la Ficha en 'trabajadores' usando EL MISMO UID (Para RRHH)
+      //    Esto vincula automáticamente el Login con los datos de RRHH.
+      final trabajadorConId = Trabajador(
+        id: uid, // Usamos el UID de Auth como ID del documento
+        nombre: trabajador.nombre,
+        rut: trabajador.rut,
+        email: trabajador.email,
+        cargo: trabajador.cargo,
+        tipoProyecto: trabajador.tipoProyecto,
+        salarioPorDia: trabajador.salarioPorDia,
+        telefono: trabajador.telefono,
+      );
+
+      await _db.collection('trabajadores').doc(uid).set(trabajadorConId.toFirestore());
+
+    } catch (e) {
+      throw e; // Re-anzamos el error para que la pantalla lo muestre
+    } finally {
+      // Importante: Borrar la app temporal para liberar memoria
+      await tempApp?.delete();
+    }
+  }
+
+  // Guardar/Actualizar trabajador existente (sin tocar Auth)
   Future<void> saveTrabajador(Trabajador t) async {
     if (t.id.isEmpty) {
+      // Si llega aquí sin ID, es un error de lógica, pero lo manejamos guardando normal
       await _db.collection('trabajadores').add(t.toFirestore());
     } else {
       await _db.collection('trabajadores').doc(t.id).update(t.toFirestore());
@@ -22,8 +80,14 @@ class RhProvider with ChangeNotifier {
   }
 
   Future<void> deleteTrabajador(String id) async {
+    // Nota: Esto borra la ficha de RRHH, pero NO borra el usuario de Auth 
+    // (Borrar de Auth requiere Cloud Functions o re-autenticación admin)
     await _db.collection('trabajadores').doc(id).delete();
+    
+    // Opcional: Desactivar en 'users' para que no pueda entrar
+    await _db.collection('users').doc(id).update({'role': 'DESACTIVADO'});
   }
+
 
   // --- ASISTENCIA ---
   

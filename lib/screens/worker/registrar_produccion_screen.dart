@@ -83,7 +83,7 @@ class _RegistrarProduccionScreenState extends State<RegistrarProduccionScreen> {
                       labelText: "Producto Fabricado",
                       border: OutlineInputBorder(),
                     ),
-                    value: _productoSeleccionado,
+                    initialValue: _productoSeleccionado,
                     items: productos.map((p) {
                       return DropdownMenuItem(
                         value: p,
