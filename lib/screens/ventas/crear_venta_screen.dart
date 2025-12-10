@@ -18,9 +18,38 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
   final _clienteCtrl = TextEditingController();
   final _rutCtrl = TextEditingController();
   final _direccionCtrl = TextEditingController();
+  
+  // Variable para almacenar la fecha seleccionada, por defecto HOY
+  DateTime _fechaVenta = DateTime.now();
+
   List<ItemOrden> carrito = [];
   double get totalVenta =>
       carrito.fold(0, (sum, item) => sum + item.totalLinea);
+
+  // Selector de fecha
+  Future<void> _seleccionarFecha() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _fechaVenta,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppTheme.primary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _fechaVenta = picked;
+      });
+    }
+  }
 
   void _mostrarSelector() {
     showModalBottomSheet(
@@ -56,14 +85,40 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
 
   void _dialogoCantidad(Producto p) {
     final cantCtrl = TextEditingController(text: "1");
+    
+    // Sugerimos un precio (Costo + 30%), pero el usuario puede editarlo
+    // Lógica para precio variable
+    final precioSugerido = (p.precioCosto * 1.3).toStringAsFixed(0);
+    final precioCtrl = TextEditingController(text: precioSugerido);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text("Agregar ${p.nombre}"),
-        content: TextField(
-          controller: cantCtrl,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: "Cantidad"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: cantCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: "Cantidad",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 15),
+            // Campo editable para el precio
+            TextField(
+              controller: precioCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: "Precio Unitario",
+                prefixText: "\$ ",
+                border: OutlineInputBorder(),
+                helperText: "Precio sugerido (30%)"
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -73,15 +128,17 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
           ElevatedButton(
             onPressed: () {
               int cant = int.tryParse(cantCtrl.text) ?? 0;
-              if (cant > 0 && cant <= p.stock) {
+              double precio = double.tryParse(precioCtrl.text) ?? 0;
+
+              if (cant > 0 && cant <= p.stock && precio > 0) {
                 setState(() {
                   carrito.add(
                     ItemOrden(
                       productoId: p.id,
                       nombre: p.nombre,
                       cantidad: cant,
-                      precioUnitario: p.precioCosto * 1.3, // Ejemplo margen 30%
-                      totalLinea: (p.precioCosto * 1.3) * cant,
+                      precioUnitario: precio, // Usamos el precio del input manual
+                      totalLinea: precio * cant,
                     ),
                   );
                 });
@@ -103,7 +160,6 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
       return;
     }
 
-    // Mostrar loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -118,12 +174,11 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
         rut: _rutCtrl.text,
         direccion: _direccionCtrl.text,
         items: carrito,
+        fecha: _fechaVenta, // Enviamos la fecha seleccionada
       );
 
-      // Cerrar loading
-      if (mounted) Navigator.pop(context);
-      // Cerrar pantalla
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context); // Cerrar loading
+      if (mounted) Navigator.pop(context); // Cerrar pantalla
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -132,8 +187,7 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
         ),
       );
     } catch (e) {
-      // Cerrar loading
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context); // Cerrar loading
 
       String errorMsg = "Ocurrió un error inesperado";
       if (e.toString().contains("STOCK_INSUFICIENTE")) {
@@ -150,14 +204,16 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Layout Responsivo: Columna en celular, Fila en Tablet
     return Scaffold(
       appBar: AppBar(title: const Text("Nueva Venta")),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isWide = constraints.maxWidth > 600;
-          Widget form = _buildForm();
-          Widget ticket = TicketPreview(
+          final isWide = constraints.maxWidth > 800;
+          
+          Widget formSection = _buildForm();
+          
+          // Ticket Preview se actualiza con los precios modificados automáticamente
+          Widget ticketSection = TicketPreview(
             cliente: _clienteCtrl.text,
             rut: _rutCtrl.text,
             direccion: _direccionCtrl.text,
@@ -167,12 +223,13 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
 
           if (isWide) {
             return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   flex: 3,
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
-                    child: form,
+                    child: formSection,
                   ),
                 ),
                 const VerticalDivider(width: 1),
@@ -180,7 +237,13 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
                   flex: 2,
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
-                    child: ticket,
+                    child: Column(
+                      children: [
+                        const Text("VISTA PREVIA", style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 10),
+                        ticketSection,
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -190,14 +253,11 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  form,
+                  formSection,
                   const Divider(height: 40),
-                  const Text(
-                    "VISTA PREVIA",
-                    style: TextStyle(color: Colors.grey),
-                  ),
+                  const Text("VISTA PREVIA", style: TextStyle(color: Colors.grey)),
                   const SizedBox(height: 10),
-                  ticket,
+                  ticketSection,
                 ],
               ),
             );
@@ -210,18 +270,41 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
   Widget _buildForm() {
     return Column(
       children: [
+        // Widget para seleccionar fecha
+        InkWell(
+          onTap: _seleccionarFecha,
+          child: InputDecorator(
+            decoration: const InputDecoration(
+              labelText: "Fecha de Venta",
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.calendar_month),
+            ),
+            child: Text(
+              "${_fechaVenta.day}/${_fechaVenta.month}/${_fechaVenta.year}",
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+
         TextField(
           controller: _clienteCtrl,
-          decoration: const InputDecoration(labelText: "Cliente"),
+          decoration: const InputDecoration(
+            labelText: "Cliente",
+            border: OutlineInputBorder(),
+          ),
           onChanged: (v) => setState(() {}),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 15),
         Row(
           children: [
             Expanded(
               child: TextField(
                 controller: _rutCtrl,
-                decoration: const InputDecoration(labelText: "RUT"),
+                decoration: const InputDecoration(
+                  labelText: "RUT",
+                  border: OutlineInputBorder(),
+                ),
                 onChanged: (v) => setState(() {}),
               ),
             ),
@@ -229,13 +312,16 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
             Expanded(
               child: TextField(
                 controller: _direccionCtrl,
-                decoration: const InputDecoration(labelText: "Dirección"),
+                decoration: const InputDecoration(
+                  labelText: "Dirección",
+                  border: OutlineInputBorder(),
+                ),
                 onChanged: (v) => setState(() {}),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 25),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -243,33 +329,48 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
               "Productos",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: _mostrarSelector,
-              child: const Text("AGREGAR"),
+              icon: const Icon(Icons.add),
+              label: const Text("AGREGAR"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+              ),
             ),
           ],
         ),
-        // Lista Items Editable
+        const SizedBox(height: 10),
+        if (carrito.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(20.0),
+            child: Text("No hay productos agregados", style: TextStyle(color: Colors.grey)),
+          ),
         ...carrito.map(
-          (item) => ListTile(
-            title: Text(item.nombre),
-            subtitle: Text("${item.cantidad} x ${item.precioUnitario}"),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () => setState(() => carrito.remove(item)),
+          (item) => Card(
+            margin: const EdgeInsets.symmetric(vertical: 5),
+            child: ListTile(
+              title: Text(item.nombre),
+              subtitle: Text("${item.cantidad} x \$${item.precioUnitario.toStringAsFixed(0)}"),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => setState(() => carrito.remove(item)),
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 30),
         SizedBox(
           width: double.infinity,
+          height: 50,
           child: ElevatedButton(
             onPressed: _guardar,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
+              backgroundColor: Colors.green,
               foregroundColor: Colors.white,
+              textStyle: const TextStyle(fontSize: 18),
             ),
-            child: const Text("GUARDAR VENTA"),
+            child: const Text("FINALIZAR VENTA"),
           ),
         ),
       ],

@@ -23,6 +23,7 @@ class VentasRepository {
     String? rut,
     String? direccion,
     required List<ItemOrden> items,
+    required DateTime fecha, // Nuevo parámetro de fecha
   }) async {
     try {
       await _db.runTransaction((transaction) async {
@@ -58,13 +59,14 @@ class VentasRepository {
           DocumentReference movRef = _db
               .collection('movimientos_inventario')
               .doc();
+          
           transaction.set(movRef, {
             'productoId': producto.id,
             'productoNombre': producto.nombre,
             'cantidad': item.cantidad,
             'tipo': 'SALIDA',
             'motivo': 'VENTA',
-            'fecha': FieldValue.serverTimestamp(),
+            'fecha': Timestamp.fromDate(fecha), // Usamos la fecha manual para consistencia
             'usuarioId': _auth.currentUser?.uid,
             'usuarioNombre': _auth.currentUser?.displayName,
           });
@@ -75,12 +77,13 @@ class VentasRepository {
 
         // 2. Crear Venta
         DocumentReference ventaRef = _db.collection('ventas').doc();
+        // Generamos un folio simple basado en el tiempo actual para unicidad
         String folio =
             "OC-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}";
 
         final ventaData = {
           'folio': folio,
-          'fecha': FieldValue.serverTimestamp(),
+          'fecha': Timestamp.fromDate(fecha), // Fecha manual registrada
           'cliente': cliente,
           'rut': rut,
           'direccion': direccion,

@@ -15,6 +15,7 @@ class VentasProvider with ChangeNotifier {
     String? rut,
     String? direccion,
     required List<ItemOrden> items,
+    required DateTime fecha, // Parámetro requerido nuevo
   }) async {
     _setLoading(true);
     try {
@@ -23,6 +24,7 @@ class VentasProvider with ChangeNotifier {
         rut: rut,
         direccion: direccion,
         items: items,
+        fecha: fecha, // Pasando la fecha al repo
       );
     } catch (e) {
       rethrow;
@@ -31,14 +33,12 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
-  // MÉTODO CORREGIDO
   Future<void> registrarPago(
     String ventaId,
     double montoAbono,
-    double pagadoActual, // Antes era confuso, ahora es explícito
+    double pagadoActual,
     double total,
   ) async {
-    // Enviamos los datos al repositorio
     await _repository.registrarPago(
       ventaId,
       montoAbono,
