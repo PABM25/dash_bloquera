@@ -70,19 +70,19 @@ lib/
 
 ## 🚀 Instalación y Configuración
 
-1. Clonar repositorio
+### 1. Clonar repositorio
 
 ```text
 git clone [https://github.com/tu-usuario/dash_bloquera.git](https://github.com/tu-usuario/dash_bloquera.git)
 cd dash_bloquera
 ```
 
-2.  Instalar dependencias
+### 2.  Instalar dependencias
 
 ```text
 flutter pub get
 ```
-3. Configuración de Firebase:
+### 3. Configuración de Firebase:
 
 Crea un proyecto en Firebase Console.
 
@@ -90,11 +90,11 @@ Descarga el archivo google-services.json (para Android) y colócalo en android/a
 
 Asegúrate de habilitar Authentication y Firestore Database en la consola.
 
-4. Variables de Entorno:
+### 4. Variables de Entorno:
 
 Crea un archivo .env en la raíz del proyecto (basado en el ejemplo si existe) para configurar credenciales sensibles si es necesario.
 
-5. Ejecutar la app
+### 5. Ejecutar la app
 
 ```text
 flutter run
