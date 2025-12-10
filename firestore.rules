@@ -2,45 +2,64 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- FUNCIÓN AUXILIAR ---
+    // 1. FUNCIÓN AUXILIAR PARA VERIFICAR PERMISOS DE ESCRITURA
+    // Verifica que esté logueado Y que su rol NO sea 'demo'
+    function canWrite() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'demo';
+    }
+
     function isAuthenticated() {
       return request.auth != null;
     }
     
     // --- REGLAS POR COLECCIÓN ---
 
-    // 1. USUARIOS:
+    // 1. USUARIOS (El demo no puede editar su propio perfil para cambiarse el rol)
     match /users/{userId} {
-      allow read: if isAuthenticated(); // Cualquiera logueado puede leer usuarios (útil para ver quién creó qué)
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == userId; 
-      allow update: if isAuthenticated() && request.auth.uid == userId;
+      // Bloqueamos update para el demo
+      allow update: if canWrite() && request.auth.uid == userId;
     }
 
     // 2. PRODUCTOS
     match /productos/{productoId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if canWrite(); /
     }
 
-    // 3. MOVIMIENTOS DE INVENTARIO (Solo lectura y creación)
+    // 3. MOVIMIENTOS DE INVENTARIO
     match /movimientos_inventario/{movId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      allow create: if canWrite(); 
       allow update, delete: if false; 
     }
 
     // 4. VENTAS
     match /ventas/{ventaId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if canWrite(); 
     }
 
     // 5. CLIENTES
     match /clientes/{clienteId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if canWrite(); 
     }
 
-    // 6. RRHH y FINANZAS (Acceso Total para cualquier usuario logueado)
-    match /trabajadores/{docId} { allow read, write: if isAuthenticated(); }
-    match /asistencias/{docId} { allow read, write: if isAuthenticated(); }
-    match /gastos/{docId} { allow read, write: if isAuthenticated(); }
+    // 6. RRHH y FINANZAS
+    match /trabajadores/{docId} { 
+      allow read: if isAuthenticated();
+      allow write: if canWrite(); 
+    }
+    match /asistencias/{docId} { 
+      allow read: if isAuthenticated();
+      allow write: if canWrite(); 
+    }
+    match /gastos/{docId} { 
+      allow read: if isAuthenticated();
+      allow write: if canWrite(); 
+    }
   }
 }

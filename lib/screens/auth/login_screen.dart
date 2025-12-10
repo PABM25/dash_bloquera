@@ -17,15 +17,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _submit() async {
     if (_emailCtrl.text.isEmpty || _passCtrl.text.isEmpty) return;
+    _ejecutarLogin(_emailCtrl.text.trim(), _passCtrl.text.trim());
+  }
 
+  void _ejecutarLogin(String email, String password) async {
     setState(() => _isLoading = true);
-
-    // Intentamos loguear
-    final error = await Provider.of<AuthProvider>(
-      context,
-      listen: false,
-    ).login(email: _emailCtrl.text.trim(), password: _passCtrl.text.trim());
-
+    final error = await Provider.of<AuthProvider>(context, listen: false)
+        .login(email: email, password: password);
     setState(() => _isLoading = false);
 
     if (error != null && mounted) {
@@ -33,6 +31,13 @@ class _LoginScreenState extends State<LoginScreen> {
         SnackBar(content: Text(error), backgroundColor: Colors.red),
       );
     }
+  }
+
+  void _loginDemo() {
+    // Credenciales del usuario demo que creaste en Firebase
+    _emailCtrl.text = "demo@portafolio.com";
+    _passCtrl.text = "DemoPortafolio17654"; 
+    _ejecutarLogin(_emailCtrl.text, _passCtrl.text);
   }
 
   @override
@@ -46,27 +51,17 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const Icon(Icons.lock, size: 80, color: AppTheme.primary),
               const SizedBox(height: 20),
-              const Text(
-                "Bienvenido",
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
+              const Text("Dash Bloquera", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
               const SizedBox(height: 30),
 
               TextField(
                 controller: _emailCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Correo Electrónico',
-                  prefixIcon: Icon(Icons.email),
-                ),
-                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'Correo', prefixIcon: Icon(Icons.email), border: OutlineInputBorder()),
               ),
               const SizedBox(height: 15),
               TextField(
                 controller: _passCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Contraseña',
-                  prefixIcon: Icon(Icons.key),
-                ),
+                decoration: const InputDecoration(labelText: 'Contraseña', prefixIcon: Icon(Icons.key), border: OutlineInputBorder()),
                 obscureText: true,
               ),
               const SizedBox(height: 30),
@@ -74,16 +69,23 @@ class _LoginScreenState extends State<LoginScreen> {
               if (_isLoading)
                 const CircularProgressIndicator()
               else
-                ElevatedButton(
-                  onPressed: _submit,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    backgroundColor: AppTheme.primary,
-                  ),
-                  child: const Text(
-                    "INGRESAR",
-                    style: TextStyle(color: Colors.white),
-                  ),
+                Column(
+                  children: [
+                    ElevatedButton(
+                      onPressed: _submit,
+                      style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: AppTheme.primary),
+                      child: const Text("INGRESAR", style: TextStyle(color: Colors.white)),
+                    ),
+                    const SizedBox(height: 20),
+                    const Divider(),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: _loginDemo,
+                      icon: const Icon(Icons.visibility),
+                      label: const Text("Ingresar MODO DEMO (Solo Lectura)"),
+                      style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+                    ),
+                  ],
                 ),
             ],
           ),
