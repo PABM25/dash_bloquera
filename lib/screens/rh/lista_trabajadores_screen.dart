@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/rh_provider.dart';
-import '../../providers/auth_provider.dart'; // IMPORTANTE
 import '../../models/trabajador_model.dart';
+import '../../utils/formatters.dart';
 import 'form_trabajador_screen.dart';
 
 class ListaTrabajadoresScreen extends StatelessWidget {
@@ -10,16 +10,11 @@ class ListaTrabajadoresScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Detectar Rol
-    final authProvider = Provider.of<AuthProvider>(context);
-    final bool esSoloLectura = authProvider.role == 'demo';
-
     return Scaffold(
-      appBar: AppBar(title: const Text("Personal")),
-      // 2. Ocultar FAB
-      floatingActionButton: esSoloLectura ? null : FloatingActionButton(
+      appBar: AppBar(title: const Text('Personal')),
+      floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FormTrabajadorScreen())),
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.person_add),
       ),
       body: Consumer<RhProvider>(
         builder: (context, provider, _) {
@@ -27,20 +22,34 @@ class ListaTrabajadoresScreen extends StatelessWidget {
             stream: provider.trabajadoresStream,
             builder: (context, snapshot) {
               if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+              final trabajadores = snapshot.data!;
+              
+              if (trabajadores.isEmpty) return const Center(child: Text("No hay trabajadores registrados"));
+
               return ListView.builder(
-                itemCount: snapshot.data!.length,
+                itemCount: trabajadores.length,
                 itemBuilder: (context, index) {
-                  final t = snapshot.data![index];
+                  final t = trabajadores[index];
                   return ListTile(
-                    title: Text(t.nombre),
-                    subtitle: Text(t.cargo ?? "Sin cargo"),
-                    // 3. Bloquear acciones
-                    trailing: esSoloLectura
-                      ? const Icon(Icons.lock_outline, color: Colors.grey)
-                      : IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => provider.deleteTrabajador(t.id),
+                    leading: CircleAvatar(
+                      backgroundColor: t.tipoProyecto == 'CONSTRUCTORA' ? Colors.orange.shade100 : Colors.blue.shade100,
+                      child: Icon(Icons.person, color: t.tipoProyecto == 'CONSTRUCTORA' ? Colors.orange : Colors.blue),
+                    ),
+                    title: Text(t.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text("${t.cargo ?? 'Sin cargo'} | ${Formatters.formatCurrency(t.salarioPorDia)}/día"),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blueGrey),
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FormTrabajadorScreen(trabajador: t))),
                         ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _confirmarEliminar(context, provider, t),
+                        ),
+                      ],
+                    ),
                   );
                 },
               );
@@ -48,6 +57,23 @@ class ListaTrabajadoresScreen extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  void _confirmarEliminar(BuildContext context, RhProvider provider, Trabajador t) {
+    showDialog(
+      context: context, 
+      builder: (_) => AlertDialog(
+        title: const Text("Eliminar Trabajador"),
+        content: Text("¿Seguro que deseas eliminar a ${t.nombre}?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
+          TextButton(onPressed: () {
+            provider.deleteTrabajador(t.id);
+            Navigator.pop(context);
+          }, child: const Text("Eliminar", style: TextStyle(color: Colors.red))),
+        ],
+      )
     );
   }
 }
