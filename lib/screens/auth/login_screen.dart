@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../utils/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,82 +10,124 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  void _submit() async {
-    if (_emailCtrl.text.isEmpty || _passCtrl.text.isEmpty) return;
-    _ejecutarLogin(_emailCtrl.text.trim(), _passCtrl.text.trim());
-  }
-
-  void _ejecutarLogin(String email, String password) async {
+  Future<void> _login() async {
     setState(() => _isLoading = true);
-    final error = await Provider.of<AuthProvider>(context, listen: false)
-        .login(email: email, password: password);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    final error = await authProvider.login(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+
     setState(() => _isLoading = false);
 
-    if (error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error), backgroundColor: Colors.red),
-      );
+    if (error != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), backgroundColor: Colors.red),
+        );
+      }
     }
+    // Si no hay error, el main.dart redirige automáticamente
   }
 
-  void _loginDemo() {
-    // Credenciales del usuario demo que creaste en Firebase
-    _emailCtrl.text = "demo@portafolio.com";
-    _passCtrl.text = "DemoPortafolio17654"; 
-    _ejecutarLogin(_emailCtrl.text, _passCtrl.text);
+  // Función para llenar datos demo automáticamente
+  void _fillDemoData() {
+    _emailController.text = "demo@bloquera.com"; // Asegúrate de crear este usuario
+    _passwordController.text = "123456";
+    _login();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.lock, size: 80, color: AppTheme.primary),
-              const SizedBox(height: 20),
-              const Text("Dash Bloquera", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 30),
-
-              TextField(
-                controller: _emailCtrl,
-                decoration: const InputDecoration(labelText: 'Correo', prefixIcon: Icon(Icons.email), border: OutlineInputBorder()),
+              // Logo
+              Image.asset(
+                'assets/images/Logo.png',
+                height: 120,
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 32),
+              const Text(
+                'Bienvenido',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 32),
+              
+              // Campo Email
               TextField(
-                controller: _passCtrl,
-                decoration: const InputDecoration(labelText: 'Contraseña', prefixIcon: Icon(Icons.key), border: OutlineInputBorder()),
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Correo Electrónico',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.email),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 16),
+              
+              // Campo Password
+              TextField(
+                controller: _passwordController,
+                decoration: const InputDecoration(
+                  labelText: 'Contraseña',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock),
+                ),
                 obscureText: true,
               ),
-              const SizedBox(height: 30),
-
-              if (_isLoading)
-                const CircularProgressIndicator()
-              else
-                Column(
-                  children: [
-                    ElevatedButton(
-                      onPressed: _submit,
-                      style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: AppTheme.primary),
-                      child: const Text("INGRESAR", style: TextStyle(color: Colors.white)),
-                    ),
-                    const SizedBox(height: 20),
-                    const Divider(),
-                    const SizedBox(height: 10),
-                    OutlinedButton.icon(
-                      onPressed: _loginDemo,
-                      icon: const Icon(Icons.visibility),
-                      label: const Text("Ingresar MODO DEMO (Solo Lectura)"),
-                      style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
-                    ),
-                  ],
+              const SizedBox(height: 24),
+              
+              // Botón Login
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[800],
+                    foregroundColor: Colors.white,
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('INGRESAR'),
                 ),
+              ),
+              const SizedBox(height: 16),
+
+              // --- BOTÓN DEMO PARA PORTAFOLIO ---
+              TextButton(
+                onPressed: _isLoading ? null : _fillDemoData,
+                child: const Text(
+                  "👤 Acceso Demo (Portafolio)",
+                  style: TextStyle(
+                    color: Colors.grey, 
+                    fontWeight: FontWeight.bold
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 8),
+              
+              // Botón Registro
+              TextButton(
+                onPressed: () {
+                  // Navegar a pantalla de registro (si la tienes separada)
+                  // O mostrar diálogo
+                  Navigator.pushNamed(context, '/register'); 
+                },
+                child: const Text('¿No tienes cuenta? Regístrate'),
+              ),
             ],
           ),
         ),

@@ -13,6 +13,7 @@ class AuthProvider with ChangeNotifier {
   String? _role;
   String? get role => _role;
 
+  // --- NUEVOS GETTERS PARA CONTROLAR LA APP ---
   bool get isAdmin => _role == 'admin';
   bool get isDemo => _role == 'demo';
 
@@ -22,7 +23,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final doc = await _db.collection('users').doc(currentUser!.uid).get();
       if (doc.exists) {
-        _role = doc.data()?['role'] ?? 'user';
+        _role = doc.data()?['role'] ?? 'demo'; // Si no tiene rol, asumimos demo por seguridad
         notifyListeners();
       }
     } catch (e) {
@@ -30,7 +31,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // --- LOGIN (Con parámetros nombrados) ---
+  // --- LOGIN ---
   Future<String?> login({
     required String email,
     required String password,
@@ -51,7 +52,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // --- REGISTRO (Con parámetros nombrados y creación de documento) ---
+  // --- REGISTRO ---
   Future<String?> register({
     required String email,
     required String password,
@@ -67,11 +68,13 @@ class AuthProvider with ChangeNotifier {
       // 2. Actualizar Display Name
       await cred.user?.updateDisplayName(nombre);
 
-      // 3. Crear documento en Firestore (Para roles y auditoría)
+      // 3. Crear documento en Firestore
+      // CAMBIO IMPORTANTE: Ahora registramos como 'demo' por defecto
+      // para que cualquiera que pruebe la app pueda ver datos sin ser admin.
       await _db.collection('users').doc(cred.user!.uid).set({
         'email': email,
         'nombre': nombre,
-        'role': 'user', // Rol por defecto
+        'role': 'demo', 
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -90,14 +93,12 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // --- ACTUALIZAR NOMBRE (Restaurado) ---
+  // --- ACTUALIZAR NOMBRE ---
   Future<String?> updateName(String newName) async {
     try {
-      // Actualizar en Auth
       await _auth.currentUser?.updateDisplayName(newName);
       await _auth.currentUser?.reload();
 
-      // Actualizar también en Firestore para mantener consistencia
       await _db.collection('users').doc(_auth.currentUser!.uid).update({
         'nombre': newName,
       });
@@ -109,7 +110,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // --- CAMBIAR CONTRASEÑA (Restaurado) ---
+  // --- CAMBIAR CONTRASEÑA ---
   Future<String?> changePassword(
     String currentPassword,
     String newPassword,
@@ -117,16 +118,13 @@ class AuthProvider with ChangeNotifier {
     final user = _auth.currentUser;
     if (user == null) return "No hay usuario activo";
 
-    // Credencial para re-autenticar (seguridad requerida por Firebase)
     final cred = EmailAuthProvider.credential(
       email: user.email!,
       password: currentPassword,
     );
 
     try {
-      // 1. Re-autenticar al usuario
       await user.reauthenticateWithCredential(cred);
-      // 2. Actualizar contraseña
       await user.updatePassword(newPassword);
       return null;
     } on FirebaseAuthException catch (e) {
