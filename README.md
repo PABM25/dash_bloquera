@@ -64,19 +64,24 @@ lib/
 ├── utils/          # Utilidades (PDF Generator, Validadores, Formateadores)
 └── widgets/        # Componentes reutilizables (KPI Cards, Drawer)
 
+```
 
 
-🚀 Instalación y Configuración
+
+## 🚀 Instalación y Configuración
 
 1. Clonar repositorio
 
+```text
 git clone [https://github.com/tu-usuario/dash_bloquera.git](https://github.com/tu-usuario/dash_bloquera.git)
 cd dash_bloquera
+```
 
 2.  Instalar dependencias
 
+```text
 flutter pub get
-
+```
 3. Configuración de Firebase:
 
 Crea un proyecto en Firebase Console.
@@ -91,5 +96,9 @@ Crea un archivo .env en la raíz del proyecto (basado en el ejemplo si existe) p
 
 5. Ejecutar la app
 
+```text
 flutter run
+```
+
+
 
