@@ -36,7 +36,7 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
+            colorScheme: const ColorScheme.light(
               primary: AppTheme.primary,
             ),
           ),
@@ -44,7 +44,8 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
         );
       },
     );
-    if (picked != null) {
+    // CORRECCIÓN: Verificar si el widget sigue montado antes de usar setState
+    if (picked != null && mounted) {
       setState(() {
         _fechaVenta = picked;
       });
@@ -87,7 +88,6 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
     final cantCtrl = TextEditingController(text: "1");
     
     // Sugerimos un precio (Costo + 30%), pero el usuario puede editarlo
-    // Lógica para precio variable
     final precioSugerido = (p.precioCosto * 1.3).toStringAsFixed(0);
     final precioCtrl = TextEditingController(text: precioSugerido);
 
@@ -131,17 +131,19 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
               double precio = double.tryParse(precioCtrl.text) ?? 0;
 
               if (cant > 0 && cant <= p.stock && precio > 0) {
-                setState(() {
-                  carrito.add(
-                    ItemOrden(
-                      productoId: p.id,
-                      nombre: p.nombre,
-                      cantidad: cant,
-                      precioUnitario: precio, // Usamos el precio del input manual
-                      totalLinea: precio * cant,
-                    ),
-                  );
-                });
+                if (mounted) {
+                  setState(() {
+                    carrito.add(
+                      ItemOrden(
+                        productoId: p.id,
+                        nombre: p.nombre,
+                        cantidad: cant,
+                        precioUnitario: precio, 
+                        totalLinea: precio * cant,
+                      ),
+                    );
+                  });
+                }
                 Navigator.pop(ctx);
               }
             },
@@ -160,6 +162,7 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
       return;
     }
 
+    // 1. Mostrar Loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -169,25 +172,42 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
     final provider = Provider.of<VentasProvider>(context, listen: false);
 
     try {
+      // 2. Operación asíncrona
       await provider.crearVenta(
         cliente: _clienteCtrl.text,
         rut: _rutCtrl.text,
         direccion: _direccionCtrl.text,
         items: carrito,
-        fecha: _fechaVenta, // Enviamos la fecha seleccionada
+        fecha: _fechaVenta, 
       );
 
-      if (mounted) Navigator.pop(context); // Cerrar loading
-      if (mounted) Navigator.pop(context); // Cerrar pantalla
+      // --- CORRECCIÓN CRÍTICA AQUÍ ---
+      
+      // Si el usuario cerró la app o cambió de pantalla mientras guardaba, detenemos.
+      if (!mounted) return;
 
+      // 3. Cerrar PRIMERO el diálogo de carga (pop del loading)
+      Navigator.pop(context); 
+
+      // 4. Mostrar el mensaje de éxito AHORA, mientras la pantalla sigue viva
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Venta creada exitosamente"),
           backgroundColor: Colors.green,
         ),
       );
+
+      // 5. Y FINALMENTE cerramos la pantalla de venta
+      if (mounted) {
+        Navigator.pop(context); 
+      }
+
     } catch (e) {
-      if (mounted) Navigator.pop(context); // Cerrar loading
+      // Manejo de errores seguro
+      if (!mounted) return;
+      
+      // Cerrar loading si falló
+      Navigator.pop(context); 
 
       String errorMsg = "Ocurrió un error inesperado";
       if (e.toString().contains("STOCK_INSUFICIENTE")) {
@@ -212,7 +232,6 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
           
           Widget formSection = _buildForm();
           
-          // Ticket Preview se actualiza con los precios modificados automáticamente
           Widget ticketSection = TicketPreview(
             cliente: _clienteCtrl.text,
             rut: _rutCtrl.text,
@@ -270,7 +289,6 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
   Widget _buildForm() {
     return Column(
       children: [
-        // Widget para seleccionar fecha
         InkWell(
           onTap: _seleccionarFecha,
           child: InputDecorator(
@@ -293,7 +311,7 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
             labelText: "Cliente",
             border: OutlineInputBorder(),
           ),
-          onChanged: (v) => setState(() {}),
+          onChanged: (v) { if (mounted) setState(() {}); },
         ),
         const SizedBox(height: 15),
         Row(
@@ -305,7 +323,7 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
                   labelText: "RUT",
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) => setState(() {}),
+                onChanged: (v) { if (mounted) setState(() {}); },
               ),
             ),
             const SizedBox(width: 10),
@@ -316,7 +334,7 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
                   labelText: "Dirección",
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) => setState(() {}),
+                onChanged: (v) { if (mounted) setState(() {}); },
               ),
             ),
           ],
