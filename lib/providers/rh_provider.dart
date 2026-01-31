@@ -62,7 +62,7 @@ class RhProvider with ChangeNotifier {
       await _db.collection('trabajadores').doc(uid).set(trabajadorConId.toFirestore());
 
     } catch (e) {
-      throw e; // Re-anzamos el error para que la pantalla lo muestre
+      rethrow; // Re-anzamos el error para que la pantalla lo muestre
     } finally {
       // Importante: Borrar la app temporal para liberar memoria
       await tempApp?.delete();
