@@ -26,9 +26,16 @@ class _LoginScreenState extends State<LoginScreen> {
       listen: false,
     ).login(email: _emailCtrl.text.trim(), password: _passCtrl.text.trim());
 
+    // --- CORRECCIÓN ---
+    // Verificamos si el widget sigue montado.
+    // Si el login fue exitoso, AuthWrapper habrá eliminado esta pantalla,
+    // por lo que 'mounted' será false y saldremos de la función aquí
+    // evitando el error de setState().
+    if (!mounted) return;
+
     setState(() => _isLoading = false);
 
-    if (error != null && mounted) {
+    if (error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error), backgroundColor: Colors.red),
       );

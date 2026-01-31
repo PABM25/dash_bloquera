@@ -53,8 +53,9 @@ class KpiCard extends StatelessWidget {
                   // CAMBIO: withOpacity -> withValues
                   child: Icon(icon, size: 100, color: color.withValues(alpha: 0.1)),
                 ),
+                // MODIFICACIÓN CLAVE: Reducir el Padding vertical (de all(20) a symmetric)
                 Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Arriba y abajo es 16 (antes era 20)
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -100,7 +101,7 @@ class KpiCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      // MODIFICACIÓN CLAVE: Se eliminó el SizedBox(height: 4) anterior
                       Text(
                         subtitle,
                         style: TextStyle(

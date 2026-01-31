@@ -23,19 +23,21 @@ class VentasRepository {
     String? rut,
     String? direccion,
     required List<ItemOrden> items,
-    required DateTime fecha, // Nuevo parámetro de fecha
+    required DateTime fecha,
   }) async {
     try {
       await _db.runTransaction((transaction) async {
         double total = 0;
         double totalCosto = 0;
 
-        // 1. Validaciones y Cálculos
+        // Listas temporales para guardar los datos leídos
+        List<Map<String, dynamic>> actualizacionesStock = [];
+        List<Map<String, dynamic>> movimientosKardex = [];
+
+        // --- FASE 1: LECTURAS (Solo validaciones y cálculos) ---
         for (var item in items) {
-          DocumentReference prodRef = _db
-              .collection('productos')
-              .doc(item.productoId);
-          DocumentSnapshot prodSnap = await transaction.get(prodRef);
+          DocumentReference prodRef = _db.collection('productos').doc(item.productoId);
+          DocumentSnapshot prodSnap = await transaction.get(prodRef); // Lectura segura
 
           if (!prodSnap.exists) {
             throw Failure(message: "Producto no encontrado: ${item.nombre}");
@@ -45,45 +47,57 @@ class VentasRepository {
 
           if (producto.stock < item.cantidad) {
             throw Failure(
-              message:
-                  "Stock insuficiente para ${producto.nombre}. Disponible: ${producto.stock}",
+              message: "Stock insuficiente para ${producto.nombre}. Disponible: ${producto.stock}",
             );
           }
 
-          // Actualizar Stock
-          transaction.update(prodRef, {
-            'stock': producto.stock - item.cantidad,
+          // Guardamos lo que haremos en la Fase 2 (sin escribir todavía)
+          actualizacionesStock.add({
+            'ref': prodRef,
+            'nuevoStock': producto.stock - item.cantidad,
           });
 
-          // Registrar Movimiento de Kardex (Salida por Venta)
-          DocumentReference movRef = _db
-              .collection('movimientos_inventario')
-              .doc();
-          
-          transaction.set(movRef, {
+          movimientosKardex.add({
             'productoId': producto.id,
             'productoNombre': producto.nombre,
             'cantidad': item.cantidad,
-            'tipo': 'SALIDA',
-            'motivo': 'VENTA',
-            'fecha': Timestamp.fromDate(fecha), // Usamos la fecha manual para consistencia
-            'usuarioId': _auth.currentUser?.uid,
-            'usuarioNombre': _auth.currentUser?.displayName,
           });
 
           total += item.totalLinea;
           totalCosto += (producto.precioCosto * item.cantidad);
         }
 
-        // 2. Crear Venta
+        // --- FASE 2: ESCRITURAS (Solo Updates y Sets) ---
+        
+        // 1. Aplicar actualizaciones de stock
+        for (var update in actualizacionesStock) {
+          transaction.update(update['ref'], {
+            'stock': update['nuevoStock'],
+          });
+        }
+
+        // 2. Registrar movimientos de inventario
+        for (var mov in movimientosKardex) {
+          DocumentReference movRef = _db.collection('movimientos_inventario').doc();
+          transaction.set(movRef, {
+            'productoId': mov['productoId'],
+            'productoNombre': mov['productoNombre'],
+            'cantidad': mov['cantidad'],
+            'tipo': 'SALIDA',
+            'motivo': 'VENTA',
+            'fecha': Timestamp.fromDate(fecha),
+            'usuarioId': _auth.currentUser?.uid,
+            'usuarioNombre': _auth.currentUser?.displayName,
+          });
+        }
+
+        // 3. Crear la Venta
         DocumentReference ventaRef = _db.collection('ventas').doc();
-        // Generamos un folio simple basado en el tiempo actual para unicidad
-        String folio =
-            "OC-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}";
+        String folio = "OC-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}";
 
         final ventaData = {
           'folio': folio,
-          'fecha': Timestamp.fromDate(fecha), // Fecha manual registrada
+          'fecha': Timestamp.fromDate(fecha),
           'cliente': cliente,
           'rut': rut,
           'direccion': direccion,
