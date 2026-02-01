@@ -1,28 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart'; // [IMPORTANTE] Para formatear moneda
 import '../../providers/dashboard_provider.dart';
 import '../../models/dashboard_summary.dart';
 import '../../widgets/app_drawer.dart';
 import '../../widgets/kpi_card.dart';
 import '../../utils/app_theme.dart';
-// Importa tus otras pantallas aquí si quieres navegar, por ejemplo:
-// import '../ventas/lista_ventas_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Usamos Consumer del DashboardProvider
+    // [IMPORTANTE] Definimos el formateador aquí
+    final currencyFormat = NumberFormat.compactCurrency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
+    // Si prefieres ver los números completos (ej: $ 1.500.000) usa este otro:
+    // final currencyFormat = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
+
     return Consumer<DashboardProvider>(
       builder: (context, dashboardProv, _) {
         return Scaffold(
           appBar: AppBar(title: const Text("Dashboard")),
           drawer: const AppDrawer(),
-          backgroundColor: Colors.grey[50], // Fondo suave para resaltar las tarjetas
+          backgroundColor: Colors.grey[50], 
           
-          // 1. CENTRADO Y LÍMITE DE ANCHO (Mejora Web)
           body: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1200),
@@ -53,9 +55,9 @@ class HomeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 20),
 
-                        // 2. GRID INTELIGENTE (Mejora Responsive)
+                        // Grid de tarjetas KPI
                         GridView.extent(
-                          maxCrossAxisExtent: 350, // Las tarjetas tendrán máximo 350px de ancho
+                          maxCrossAxisExtent: 350,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
                           shrinkWrap: true,
@@ -65,13 +67,12 @@ class HomeScreen extends StatelessWidget {
                             // Tarjeta INGRESOS
                             KpiCard(
                               title: "Ingresos",
-                              value: data.ingresos,
+                              // [CORRECCIÓN] Convertimos el número a String formateado
+                              value: currencyFormat.format(data.ingresos), 
                               subtitle: "Ir a Ventas",
                               icon: Icons.attach_money,
                               color: AppTheme.primary,
                               onTap: () {
-                                // Ejemplo de navegación:
-                                // Navigator.push(context, MaterialPageRoute(builder: (_) => const ListaVentasScreen()));
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text("Navegar a detalle de Ingresos"))
                                 );
@@ -81,19 +82,19 @@ class HomeScreen extends StatelessWidget {
                             // Tarjeta UTILIDAD
                             KpiCard(
                               title: "Utilidad Neta",
-                              value: data.utilidad,
+                              // [CORRECCIÓN]
+                              value: currencyFormat.format(data.utilidad),
                               subtitle: "Ganancia Real",
                               icon: Icons.savings,
                               color: data.utilidad >= 0 ? Colors.green : Colors.red,
-                              onTap: () {
-                                // Acción al tocar
-                              },
+                              onTap: () {},
                             ),
                             
                             // Tarjeta POR COBRAR
                             KpiCard(
                               title: "Por Cobrar",
-                              value: data.porCobrar,
+                              // [CORRECCIÓN]
+                              value: currencyFormat.format(data.porCobrar),
                               subtitle: "Saldo Pendiente",
                               icon: Icons.money_off,
                               color: AppTheme.kpiOrange,
@@ -103,13 +104,12 @@ class HomeScreen extends StatelessWidget {
                             // Tarjeta GASTOS
                             KpiCard(
                               title: "Gastos Totales",
-                              value: data.gastos,
+                              // [CORRECCIÓN]
+                              value: currencyFormat.format(data.gastos),
                               subtitle: "Ver detalle de gastos",
                               icon: Icons.shopping_bag,
                               color: AppTheme.kpiBlue,
-                              onTap: () {
-                                // Navegar a pantalla de gastos
-                              },
+                              onTap: () {},
                             ),
                           ],
                         ),
@@ -125,12 +125,15 @@ class HomeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 20),
 
-                        // 3. GRÁFICO (Con manejo de estado vacío corregido)
+                        // GRÁFICO
                         if (data.ingresos > 0 || data.gastos > 0)
                           Card(
                             elevation: 0,
                             color: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(color: Colors.grey.shade200)
+                            ),
                             child: Container(
                               height: 350,
                               padding: const EdgeInsets.all(20),
@@ -167,28 +170,41 @@ class HomeScreen extends StatelessWidget {
                             ),
                           )
                         else
-                          // Corrección del error "const Container"
                           Container(
-                            height: 200,
-                            alignment: Alignment.center,
+                            height: 300,
+                            width: double.infinity,
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.grey.shade200),
                             ),
-                            child: const Column(
+                            child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.bar_chart, size: 50, color: Colors.grey),
-                                SizedBox(height: 10),
-                                Text(
-                                  "Aún no hay suficientes datos para generar el gráfico",
+                                Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.pie_chart_outline, size: 60, color: Colors.grey),
+                                ),
+                                const SizedBox(height: 20),
+                                const Text(
+                                  "Sin datos financieros aún",
+                                  style: TextStyle(fontSize: 18, color: Colors.black54, fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  "Realiza tu primera venta o registra un gasto\npara ver las estadísticas.",
+                                  textAlign: TextAlign.center,
                                   style: TextStyle(color: Colors.grey),
                                 ),
                               ],
                             ),
                           ),
                           
-                        const SizedBox(height: 40), // Espacio final
+                        const SizedBox(height: 40),
                       ],
                     ),
                   );

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import '../utils/formatters.dart';
 
 class KpiCard extends StatelessWidget {
   final String title;
-  final double value;
+  final String value; // [CAMBIO] Ahora recibe String para aceptar formato moneda
   final String subtitle;
   final IconData icon;
   final Color color;
-  final bool isCurrency;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   const KpiCard({
     super.key,
@@ -17,104 +15,84 @@ class KpiCard extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.color,
-    this.isCurrency = true,
-    this.onTap,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Card(
+      elevation: 2,
+      surfaceTintColor: Colors.white,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            // CAMBIO: withOpacity -> withValues
-            color: color.withValues(alpha: 0.15),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            // CAMBIO: withOpacity -> withValues
-            splashColor: color.withValues(alpha: 0.1),
-            highlightColor: color.withValues(alpha: 0.05),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -20,
-                  top: -20,
-                  // CAMBIO: withOpacity -> withValues
-                  child: Icon(icon, size: 100, color: color.withValues(alpha: 0.1)),
-                ),
-                // MODIFICACIÓN CLAVE: Reducir el Padding vertical (de all(20) a symmetric)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Arriba y abajo es 16 (antes era 20)
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              // CAMBIO: withOpacity -> withValues
-                              color: color.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(icon, color: color, size: 20),
-                          ),
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: Text(
-                              title,
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Encabezado con Icono
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(icon, color: color, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const Spacer(),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          isCurrency
-                              ? Formatters.formatCurrency(value)
-                              : value.toStringAsFixed(0),
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ),
-                      // MODIFICACIÓN CLAVE: Se eliminó el SizedBox(height: 4) anterior
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 10),
+
+              // Valor Principal (Con ajuste automático de tamaño)
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value, 
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                    letterSpacing: -0.5,
                   ),
                 ),
-              ],
-            ),
+              ),
+
+              // Subtítulo
+              Row(
+                children: [
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: color,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.arrow_forward_ios, size: 10, color: color),
+                ],
+              ),
+            ],
           ),
         ),
       ),

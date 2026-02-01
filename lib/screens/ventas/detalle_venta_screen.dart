@@ -15,6 +15,7 @@ class DetalleVentaScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Escuchamos cambios en tiempo real por si se paga la venta
     final Stream<DocumentSnapshot> ventaStream = FirebaseFirestore.instance
         .collection('ventas')
         .doc(ventaId)
@@ -24,13 +25,27 @@ class DetalleVentaScreen extends StatelessWidget {
       stream: ventaStream,
       builder: (context, snapshot) {
         Venta venta = ventaInicial;
+        // Si hay datos nuevos en Firestore, actualizamos la vista
         if (snapshot.hasData && snapshot.data!.exists) {
           venta = Venta.fromFirestore(snapshot.data!);
         }
 
         double saldoPendiente = venta.total - venta.montoPagado;
-        Color estadoColor = venta.estadoPago == 'PAGADA' ? Colors.green : (venta.estadoPago == 'ABONADA' ? Colors.orange : Colors.red);
+        
+        // Color dinámico según estado
+        Color estadoColor;
+        switch (venta.estadoPago) {
+          case 'PAGADA':
+            estadoColor = Colors.green;
+            break;
+          case 'ABONADA':
+            estadoColor = Colors.orange;
+            break;
+          default:
+            estadoColor = Colors.red;
+        }
 
+        // Función para mostrar menú de PDF
         void mostrarOpcionesImpresion() {
           showModalBottomSheet(
             context: context,
@@ -48,7 +63,8 @@ class DetalleVentaScreen extends StatelessWidget {
                       title: const Text("Descargar Factura A4 (PDF)"),
                       onTap: () {
                         Navigator.pop(ctx);
-                        PdfGenerator().generateInvoiceA4(venta);
+                        // Llamada estática corregida
+                        PdfGenerator.generateInvoiceA4(venta);
                       },
                     ),
                     ListTile(
@@ -56,7 +72,8 @@ class DetalleVentaScreen extends StatelessWidget {
                       title: const Text("Imprimir Ticket (80mm)"),
                       onTap: () {
                         Navigator.pop(ctx);
-                        PdfGenerator().generateTicket80mm(venta);
+                        // Llamada estática corregida
+                        PdfGenerator.generateTicket80mm(venta);
                       },
                     ),
                   ],
@@ -66,6 +83,7 @@ class DetalleVentaScreen extends StatelessWidget {
           );
         }
 
+        // Función para registrar pagos parciales o totales
         void registrarPago() {
            TextEditingController montoCtrl = TextEditingController(text: saldoPendiente.toStringAsFixed(0));
            showDialog(
@@ -100,6 +118,7 @@ class DetalleVentaScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Tarjeta de Resumen Financiero
               Card(
                 elevation: 4,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -120,8 +139,8 @@ class DetalleVentaScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              // CAMBIO: withOpacity -> withValues
-                              color: estadoColor.withValues(alpha: 0.1),
+                              // Compatibilidad con versiones nuevas de Flutter
+                              color: estadoColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(20)
                             ),
                             child: Text(venta.estadoPago, style: TextStyle(color: estadoColor, fontWeight: FontWeight.bold)),
@@ -153,6 +172,8 @@ class DetalleVentaScreen extends StatelessWidget {
               
               const Text("Detalle de Productos", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
+              
+              // Lista de Items
               ...venta.items.map((item) => Card(
                 elevation: 1,
                 margin: const EdgeInsets.only(bottom: 8),
@@ -165,8 +186,10 @@ class DetalleVentaScreen extends StatelessWidget {
 
               const SizedBox(height: 40),
               
+              // Botones de Acción
               Row(
                 children: [
+                  // Botón Pagar (Solo si hay saldo pendiente)
                   if (saldoPendiente > 0)
                     Expanded(
                       child: ElevatedButton.icon(
@@ -182,6 +205,7 @@ class DetalleVentaScreen extends StatelessWidget {
                     ),
                   if (saldoPendiente > 0) const SizedBox(width: 10),
                   
+                  // Botón Imprimir / PDF
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: mostrarOpcionesImpresion,

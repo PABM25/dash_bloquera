@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-// IMPORTANTE: Esta línea es necesaria para usar FirebaseFirestore
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'; // [NUEVO]
 import 'firebase_options.dart';
 
 // Utils
@@ -16,6 +16,7 @@ import 'providers/ventas_provider.dart';
 import 'providers/rh_provider.dart';
 import 'providers/finanzas_provider.dart';
 import 'providers/dashboard_provider.dart';
+import 'providers/presupuestos_provider.dart';
 
 // Screens
 import 'screens/auth/login_screen.dart';
@@ -28,7 +29,6 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // CONFIGURACIÓN DE PERSISTENCIA
-  // Habilita el uso de la base de datos sin conexión a internet
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
@@ -49,8 +49,6 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => VentasProvider()),
         ChangeNotifierProvider(create: (_) => RhProvider()),
         ChangeNotifierProvider(create: (_) => FinanzasProvider()),
-
-        // Dashboard depende de Ventas y Finanzas
         ProxyProvider2<VentasProvider, FinanzasProvider, DashboardProvider>(
           update: (_, ventas, finanzas, __) =>
               DashboardProvider(ventas, finanzas),
@@ -60,6 +58,15 @@ class MyApp extends StatelessWidget {
         title: 'Dash Bloquera',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
+        // [NUEVO] Configuración de idioma Español
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('es', 'ES'), 
+        ],
         home: const AuthWrapper(),
       ),
     );
