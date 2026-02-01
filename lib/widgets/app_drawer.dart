@@ -4,6 +4,8 @@ import '../providers/auth_provider.dart';
 import '../screens/dashboard/home_screen.dart';
 import '../screens/inventario/lista_productos_screen.dart';
 import '../screens/ventas/lista_ventas_screen.dart';
+// IMPORTANTE: Importamos la pantalla de presupuestos/cotizaciones
+import '../screens/ventas/crear_presupuesto_screen.dart'; 
 import '../screens/rh/lista_trabajadores_screen.dart';
 import '../screens/rh/calculo_salario_screen.dart';
 import '../screens/finanzas/lista_gastos_screen.dart';
@@ -53,6 +55,14 @@ class AppDrawer extends StatelessWidget {
                   "Ventas",
                   const ListaVentasScreen(),
                 ),
+                // --- NUEVO ÍTEM AGREGADO ---
+                _buildItem(
+                  context,
+                  Icons.description, // Icono para documentos/cotizaciones
+                  "Cotizaciones",
+                  const CrearPresupuestoScreen(),
+                ),
+                // ---------------------------
 
                 const Divider(),
                 const Padding(
@@ -62,7 +72,7 @@ class AppDrawer extends StatelessWidget {
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ),
-                // AHORA ESTOS ÍTEMS SON VISIBLES PARA TODOS LOS LOGUEADOS
+                
                 _buildItem(
                   context,
                   Icons.people,

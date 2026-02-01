@@ -9,7 +9,6 @@ import '../../providers/inventario_provider.dart';
 import '../../providers/presupuestos_provider.dart';
 import '../../utils/pdf_generator.dart';
 
-
 class CrearPresupuestoScreen extends StatefulWidget {
   const CrearPresupuestoScreen({super.key});
 
@@ -44,7 +43,8 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
     }
   }
 
-  void _mostrarSelector() {
+  // --- OPCIÓN 1: SELECCIONAR PRODUCTO DE INVENTARIO ---
+  void _mostrarSelectorProducto() {
     showModalBottomSheet(
       context: context,
       builder: (ctx) => Consumer<InventarioProvider>(
@@ -57,7 +57,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
               children: [
                 const Padding(
                   padding: EdgeInsets.all(16.0),
-                  child: Text("Seleccione Producto para Cotizar", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: Text("Seleccione Material / Producto", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
                 Expanded(
                   child: ListView.builder(
@@ -70,7 +70,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                         subtitle: Text("Precio Base: \$${p.precioCosto}"), 
                         onTap: () {
                           Navigator.pop(ctx);
-                          _dialogoCantidad(p);
+                          _dialogoCantidadProducto(p);
                         },
                       );
                     },
@@ -84,14 +84,14 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
     );
   }
 
-  void _dialogoCantidad(Producto p) {
+  void _dialogoCantidadProducto(Producto p) {
     final cantCtrl = TextEditingController(text: "1");
-    final precioCtrl = TextEditingController(); // Precio libre
+    final precioCtrl = TextEditingController(); 
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text("Cotizar ${p.nombre}"),
+        title: Text("Agregar ${p.nombre}"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -117,17 +117,12 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
               int cant = int.tryParse(cantCtrl.text) ?? 0;
               double precio = double.tryParse(precioCtrl.text) ?? 0;
               if (cant > 0 && precio > 0) {
-                if (mounted) {
-                  setState(() {
-                    carrito.add(ItemOrden(
-                      productoId: p.id,
-                      nombre: p.nombre,
-                      cantidad: cant,
-                      precioUnitario: precio,
-                      totalLinea: precio * cant,
-                    ));
-                  });
-                }
+                _agregarAlCarrito(
+                  id: p.id,
+                  nombre: p.nombre,
+                  cantidad: cant,
+                  precio: precio
+                );
                 Navigator.pop(ctx);
               }
             },
@@ -138,19 +133,99 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
     );
   }
 
+  // --- OPCIÓN 2: AGREGAR SERVICIO / MANO DE OBRA ---
+  void _dialogoServicioManual() {
+    final descripcionCtrl = TextEditingController();
+    final precioTotalCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Agregar Mano de Obra / Servicio"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: descripcionCtrl,
+              decoration: const InputDecoration(
+                labelText: "Descripción del trabajo",
+                hintText: "Ej: Cierre perimetral 20 mts",
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: precioTotalCtrl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                labelText: "Valor Total del Servicio", 
+                prefixText: "\$ ", 
+                border: OutlineInputBorder()
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.handyman),
+            label: const Text("Agregar Servicio"),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
+            onPressed: () {
+              String desc = descripcionCtrl.text.trim();
+              double precio = double.tryParse(precioTotalCtrl.text) ?? 0;
+
+              if (desc.isNotEmpty && precio > 0) {
+                _agregarAlCarrito(
+                  id: 'SERVICIO_${DateTime.now().millisecondsSinceEpoch}',
+                  nombre: desc,
+                  cantidad: 1, 
+                  precio: precio
+                );
+                Navigator.pop(ctx);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _agregarAlCarrito({required String id, required String nombre, required int cantidad, required double precio}) {
+    if (mounted) {
+      setState(() {
+        carrito.add(ItemOrden(
+          productoId: id,
+          nombre: nombre,
+          cantidad: cantidad,
+          precioUnitario: precio,
+          totalLinea: precio * cantidad,
+        ));
+      });
+    }
+  }
+
+  // --- FUNCIÓN GUARDAR CORREGIDA ---
   void _guardarPresupuesto() async {
     if (!_formKey.currentState!.validate()) return;
     if (carrito.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Agregue al menos un producto")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Agregue al menos un ítem")));
       return;
     }
 
-    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+    // 1. Mostrar diálogo de carga
+    showDialog(
+      context: context, 
+      barrierDismissible: false, 
+      builder: (_) => const Center(child: CircularProgressIndicator())
+    );
 
     try {
       final provider = Provider.of<PresupuestosProvider>(context, listen: false);
       
-      // Creamos el presupuesto
+      // 2. Operación asíncrona (guardar en Firebase)
       await provider.crearPresupuesto(
         cliente: _clienteCtrl.text,
         rut: _rutCtrl.text,
@@ -159,20 +234,23 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
         fechaEmision: _fechaEmision,
       );
 
+      // 3. Verificar si la pantalla sigue activa
       if (!mounted) return;
-      Navigator.pop(context); // Cerrar loading
+      Navigator.of(context).pop(); // Cerrar el Loading
 
-      // Preguntar si quiere generar PDF
-      showDialog(
+      // 4. Mostrar diálogo de Éxito / PDF
+      if (!mounted) return;
+      await showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text("¡Cotización Creada!"),
-          content: const Text("La cotización se guardó correctamente. ¿Deseas generar el PDF ahora?"),
+          content: const Text("¿Deseas generar el PDF ahora?"),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(ctx); // Cerrar dialogo
-                Navigator.pop(context); // Cerrar pantalla
+                // Cerrar todo usando el contexto principal que es seguro si 'mounted' es true
+                Navigator.of(context).pop(); // Cierra Dialog
+                Navigator.of(context).pop(); // Cierra Pantalla
               },
               child: const Text("Salir"),
             ),
@@ -180,11 +258,9 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
               icon: const Icon(Icons.picture_as_pdf),
               label: const Text("Descargar PDF"),
               onPressed: () async {
-                // Creamos un objeto Presupuesto temporal para el PDF
-                // Nota: En una app real, deberías obtener el objeto creado del provider o backend
                 final tempPresupuesto = Presupuesto(
                   id: 'temp', 
-                  folio: 'NUEVO', // El folio real se generó en backend, aquí es visual
+                  folio: 'NUEVO',
                   fechaEmision: _fechaEmision,
                   fechaVencimiento: _fechaEmision.add(const Duration(days: 15)),
                   cliente: _clienteCtrl.text,
@@ -194,11 +270,19 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                   items: carrito
                 );
                 
+                // Generar PDF (async)
                 await PdfGenerator.generatePresupuestoA4(tempPresupuesto);
-                if (mounted) {
-                  Navigator.pop(ctx);
-                  Navigator.pop(context);
-                }
+                
+                // CORRECCIÓN FINAL:
+                // Solo usamos 'mounted' (que protege a 'context').
+                // No usamos el contexto del diálogo ('ctx') para evitar el error del linter.
+                // Al llamar pop() sobre el Navigator principal, cerramos el diálogo (ruta superior)
+                // y luego la pantalla.
+                
+                if (!mounted) return;
+                
+                Navigator.of(context).pop(); // Cierra Diálogo
+                Navigator.of(context).pop(); // Cierra Pantalla
               },
             ),
           ],
@@ -206,8 +290,11 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
       );
 
     } catch (e) {
-      if(mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+      if (mounted) {
+        // Si hay error, intentamos cerrar el loading
+        Navigator.of(context).pop(); 
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+      }
     }
   }
 
@@ -256,53 +343,118 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Botón Agregar
+              // BOTONES DE ACCIÓN (PRODUCTO vs SERVICIO)
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Items (${carrito.length})", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  FilledButton.icon(
-                    onPressed: _mostrarSelector,
-                    icon: const Icon(Icons.add),
-                    label: const Text("AGREGAR PRODUCTO"),
-                    style: FilledButton.styleFrom(backgroundColor: Colors.blueGrey),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _mostrarSelectorProducto,
+                      icon: const Icon(Icons.inventory_2),
+                      label: const Text("AGREGAR\nPRODUCTO", textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Colors.blueGrey,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _dialogoServicioManual,
+                      icon: const Icon(Icons.handyman),
+                      label: const Text("AGREGAR\nSERVICIO", textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Colors.orange[800],
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
                   ),
                 ],
               ),
+              
               const SizedBox(height: 10),
+              
+              // Título Items
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text("Detalle (${carrito.length})", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))
+              ),
 
-              // Lista
+              const SizedBox(height: 5),
+
+              // Lista de Items
               if (carrito.isEmpty)
-                const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("Sin items agregados")))
-              else
-                ...carrito.map((item) => Card(
-                  child: ListTile(
-                    leading: CircleAvatar(backgroundColor: Colors.blueGrey[100], child: Text("${item.cantidad}")),
-                    title: Text(item.nombre),
-                    subtitle: Text(currencyFormat.format(item.precioUnitario)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(currencyFormat.format(item.totalLinea), style: const TextStyle(fontWeight: FontWeight.bold)),
-                        IconButton(icon: const Icon(Icons.close, color: Colors.red), onPressed: () => setState(() => carrito.remove(item))),
-                      ],
-                    ),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(30),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey[300]!)
                   ),
-                )),
+                  child: const Column(
+                    children: [
+                      Icon(Icons.post_add, size: 50, color: Colors.grey),
+                      SizedBox(height: 10),
+                      Text("Agregue productos o mano de obra", style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                )
+              else
+                ...carrito.map((item) {
+                  final bool esServicio = item.productoId.startsWith('SERVICIO_');
+                  return Card(
+                    elevation: 2,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: esServicio ? Colors.orange[100] : Colors.blueGrey[100],
+                        child: Icon(
+                          esServicio ? Icons.handyman : Icons.inventory_2, 
+                          color: esServicio ? Colors.orange[800] : Colors.blueGrey, 
+                          size: 20
+                        ),
+                      ),
+                      title: Text(item.nombre, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        esServicio 
+                        ? "Servicio Global" 
+                        : "${item.cantidad} unidades x ${currencyFormat.format(item.precioUnitario)}"
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(currencyFormat.format(item.totalLinea), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.red),
+                            onPressed: () => setState(() => carrito.remove(item)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
 
               const SizedBox(height: 30),
               
               // Botón Guardar
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 55,
                 child: ElevatedButton.icon(
                   onPressed: _guardarPresupuesto,
                   icon: const Icon(Icons.save),
-                  label: Text("GUARDAR COTIZACIÓN  •  ${currencyFormat.format(totalVenta)}"),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey[800], foregroundColor: Colors.white),
+                  label: Text("FINALIZAR COTIZACIÓN  •  ${currencyFormat.format(totalVenta)}", style: const TextStyle(fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[700], 
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+                  ),
                 ),
               ),
+              const SizedBox(height: 30),
             ],
           ),
         ),
