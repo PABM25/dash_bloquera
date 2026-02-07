@@ -42,13 +42,20 @@ add_definitions(-DUNICODE -D_UNICODE)
 # default. In most cases, you should add new options to specific targets instead
 # of modifying this function.
 function(APPLY_STANDARD_SETTINGS TARGET)
-  target_compile_features(${TARGET} PUBLIC cxx_std_17)
+  # 1. Usar C++20 (Requerido por Firebase)
+  target_compile_features(${TARGET} PUBLIC cxx_std_20)
+  
   target_compile_options(${TARGET} PRIVATE /W4 /wd"4100")
   target_compile_options(${TARGET} PRIVATE /EHsc)
-  target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
+
+  # 2. NUEVA LÍNEA: Permitir sintaxis antigua (Arregla el error de 'printing')
+  target_compile_options(${TARGET} PRIVATE /permissive)
+  
+  # 3. Habilitar excepciones (Requerido por Firebase)
+  target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=1")
+  
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
 endfunction()
-
 # Flutter library and tool build rules.
 set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
 add_subdirectory(${FLUTTER_MANAGED_DIR})
