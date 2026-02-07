@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'; // [NUEVO]
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
 
 // Utils
@@ -16,7 +16,7 @@ import 'providers/ventas_provider.dart';
 import 'providers/rh_provider.dart';
 import 'providers/finanzas_provider.dart';
 import 'providers/dashboard_provider.dart';
-import 'providers/presupuestos_provider.dart';
+import 'providers/presupuestos_provider.dart'; // Ya lo tenías importado
 
 // Screens
 import 'screens/auth/login_screen.dart';
@@ -49,6 +49,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => VentasProvider()),
         ChangeNotifierProvider(create: (_) => RhProvider()),
         ChangeNotifierProvider(create: (_) => FinanzasProvider()),
+        // [CORRECCIÓN] Agregamos el proveedor de presupuestos aquí:
+        ChangeNotifierProvider(create: (_) => PresupuestosProvider()), 
+
         ProxyProvider2<VentasProvider, FinanzasProvider, DashboardProvider>(
           update: (_, ventas, finanzas, __) =>
               DashboardProvider(ventas, finanzas),
@@ -58,7 +61,6 @@ class MyApp extends StatelessWidget {
         title: 'Dash Bloquera',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        // [NUEVO] Configuración de idioma Español
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,

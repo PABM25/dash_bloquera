@@ -430,7 +430,7 @@ class PdfGenerator {
                           _cell(Formatters.formatCurrency(item.precioUnitario), align: pw.TextAlign.right),
                           _cell(Formatters.formatCurrency(item.totalLinea), align: pw.TextAlign.right),
                         ],
-                      )).toList(),
+                      )),
                     ],
                   ),
                   
