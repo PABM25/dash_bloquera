@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-
 class Producto {
   final String id;
   final String nombre;
@@ -22,9 +21,13 @@ class Producto {
     return Producto(
       id: doc.id,
       nombre: data['nombre'] ?? '',
-      stock: data['stock'] ?? 0,
-      // Convertir a double asegurando que no falle si viene como int
-      precioCosto: (data['precio_costo'] ?? 0).toDouble(),
+      // CORRECCIÓN CLAVE: Casteo seguro 'as num?'. 
+      // Esto evita crashes si 'stock' viene como double (ej: 5.0) en la BD.
+      stock: (data['stock'] as num?)?.toInt() ?? 0,
+      
+      // CORRECCIÓN CLAVE: Aseguramos que siempre sea double.
+      precioCosto: (data['precio_costo'] as num?)?.toDouble() ?? 0.0,
+      
       descripcion: data['descripcion'],
     );
   }
@@ -38,5 +41,4 @@ class Producto {
       'descripcion': descripcion,
     };
   }
-
 }

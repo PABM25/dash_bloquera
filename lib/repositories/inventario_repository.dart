@@ -74,7 +74,7 @@ class InventarioRepository {
       DocumentSnapshot snap = await transaction.get(prodRef);
 
       if (!snap.exists) return;
-      int stockActual = snap.get('stock') ?? 0;
+      int stockActual = (snap.get('stock') as num?)?.toInt() ?? 0;
 
       transaction.update(prodRef, {'stock': stockActual + cantidad});
 
@@ -91,5 +91,53 @@ class InventarioRepository {
         'usuarioNombre': _auth.currentUser?.displayName,
       });
     });
+  }
+
+  // NUEVO METODO MOVIDO DESDE EL PROVIDER
+  Future<void> registrarProduccionBloquero({
+    required String productoId,
+    required String productoNombre,
+    required int cantidad,
+    required DateTime fecha,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw "Usuario no identificado";
+
+    WriteBatch batch = _db.batch();
+
+    // 1. Referencias
+    final prodRef = _db.collection('productos').doc(productoId);
+    final prodRecordRef = _db.collection('registros_produccion').doc();
+    final kardexRef = _db.collection('movimientos_inventario').doc();
+
+    // 2. Operaciones
+    // A: Incrementar Stock
+    batch.update(prodRef, {
+      'stock': FieldValue.increment(cantidad),
+    });
+
+    // B: Registro para nómina
+    batch.set(prodRecordRef, {
+      'trabajadorId': user.uid,
+      'trabajadorNombre': user.displayName ?? 'Trabajador',
+      'productoId': productoId,
+      'productoNombre': productoNombre,
+      'cantidad': cantidad,
+      'fecha': Timestamp.fromDate(fecha),
+      'pagoProcesado': false,
+    });
+
+    // C: Kardex
+    batch.set(kardexRef, {
+      'productoId': productoId,
+      'productoNombre': productoNombre,
+      'cantidad': cantidad,
+      'tipo': 'ENTRADA',
+      'motivo': 'PRODUCCION_INTERNA',
+      'fecha': FieldValue.serverTimestamp(),
+      'usuarioId': user.uid,
+    });
+
+    await batch.commit();
   }
 }
