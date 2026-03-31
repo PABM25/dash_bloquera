@@ -48,51 +48,85 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.lock, size: 80, color: AppTheme.primary),
-              const SizedBox(height: 20),
-              const Text(
-                "Bienvenido",
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Card(
+              elevation: 4,
+              shadowColor: Colors.black12,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
               ),
-              const SizedBox(height: 30),
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.lock, size: 60, color: AppTheme.primary),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      "Bienvenido",
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      "Ingresa a tu cuenta para continuar",
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                    const SizedBox(height: 32),
 
-              TextField(
-                controller: _emailCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Correo Electrónico',
-                  prefixIcon: Icon(Icons.email),
-                ),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 15),
-              TextField(
-                controller: _passCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Contraseña',
-                  prefixIcon: Icon(Icons.key),
-                ),
-                obscureText: true,
-              ),
-              const SizedBox(height: 30),
+                    TextField(
+                      controller: _emailCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Correo Electrónico',
+                        hintText: 'ejemplo@empresa.com',
+                        prefixIcon: Icon(Icons.email_outlined),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _passCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Contraseña',
+                        hintText: 'Tu contraseña',
+                        prefixIcon: Icon(Icons.lock_outline),
+                      ),
+                      obscureText: true,
+                      onSubmitted: (_) => _submit(),
+                    ),
+                    const SizedBox(height: 32),
 
-              if (_isLoading)
-                const CircularProgressIndicator()
-              else
-                ElevatedButton(
-                  onPressed: _submit,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    backgroundColor: AppTheme.primary,
-                  ),
-                  child: const Text(
-                    "INGRESAR",
-                    style: TextStyle(color: Colors.white),
-                  ),
+                    if (_isLoading)
+                      const CircularProgressIndicator()
+                    else
+                      ElevatedButton(
+                        onPressed: _submit,
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 54),
+                          backgroundColor: AppTheme.primary,
+                        ),
+                        child: const Text(
+                          "INGRESAR",
+                          style: TextStyle(color: Colors.white, fontSize: 16, letterSpacing: 1),
+                        ),
+                      ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
         ),
       ),

@@ -55,15 +55,25 @@ class HomeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 20),
 
-                        // Grid de tarjetas KPI
-                        GridView.extent(
-                          maxCrossAxisExtent: 350,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          childAspectRatio: 1.5,
-                          children: [
+                        // Grid de tarjetas KPI (Responsivo)
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            // Ajustamos número de columnas según el ancho disponible
+                            int crossAxisCount = 1;
+                            if (constraints.maxWidth > 800) {
+                              crossAxisCount = 4;
+                            } else if (constraints.maxWidth > 500) {
+                              crossAxisCount = 2;
+                            }
+
+                            return GridView.count(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              childAspectRatio: crossAxisCount == 1 ? 2.5 : 1.5,
+                              children: [
                             // Tarjeta INGRESOS
                             KpiCard(
                               title: "Ingresos",
@@ -111,7 +121,9 @@ class HomeScreen extends StatelessWidget {
                               color: AppTheme.kpiBlue,
                               onTap: () {},
                             ),
-                          ],
+                              ],
+                            );
+                          }
                         ),
 
                         const SizedBox(height: 40),
