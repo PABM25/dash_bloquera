@@ -53,7 +53,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PresupuestosProvider()), 
 
         ProxyProvider2<VentasProvider, FinanzasProvider, DashboardProvider>(
-          update: (_, ventas, finanzas, __) =>
+          update: (_, ventas, finanzas, prev) =>
               DashboardProvider(ventas, finanzas),
         ),
       ],

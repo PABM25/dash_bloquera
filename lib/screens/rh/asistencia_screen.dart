@@ -88,7 +88,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                     _trabajadorSeleccionado!.tipoProyecto
                   );
 
-                  if (!mounted) return;
+                  if (!context.mounted) return;
                   if (error != null) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), backgroundColor: Colors.orange));
                   } else {
