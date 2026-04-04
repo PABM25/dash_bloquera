@@ -76,13 +76,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
                       "Ingresa a tu cuenta para continuar",
-                      style: TextStyle(color: Colors.black54),
+                      style: TextStyle(color: Colors.white70),
                     ),
                     const SizedBox(height: 32),
 
