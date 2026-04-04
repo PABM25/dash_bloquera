@@ -6,6 +6,7 @@ class Producto {
   final int stock;
   final double precioCosto;
   final String? descripcion;
+  final String? barcode;
 
   Producto({
     required this.id,
@@ -13,6 +14,7 @@ class Producto {
     required this.stock,
     required this.precioCosto,
     this.descripcion,
+    this.barcode,
   });
   
   // Convierte un documento de Firestore a un objeto Producto
@@ -29,6 +31,7 @@ class Producto {
       precioCosto: (data['precio_costo'] as num?)?.toDouble() ?? 0.0,
       
       descripcion: data['descripcion'],
+      barcode: data['barcode'],
     );
   }
 
@@ -39,6 +42,7 @@ class Producto {
       'stock': stock,
       'precio_costo': precioCosto,
       'descripcion': descripcion,
+      'barcode': barcode,
     };
   }
 }

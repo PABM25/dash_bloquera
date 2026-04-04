@@ -5,6 +5,7 @@ import '../../providers/inventario_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/producto_modelo.dart';
 import 'form_producto_screen.dart';
+import 'escaner_stock_screen.dart';
 import '../../utils/export_util.dart';
 
 class ListaProductosScreen extends StatelessWidget {
@@ -45,10 +46,23 @@ class ListaProductosScreen extends StatelessWidget {
       ),
       
       // 2. Ocultar botón si es solo lectura
-      floatingActionButton: esSoloLectura ? null : FloatingActionButton.extended(
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FormProductoScreen())),
-        icon: const Icon(Icons.add),
-        label: const Text("Nuevo Producto"),
+      floatingActionButton: esSoloLectura ? null : Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: "btn_escaner",
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EscanerStockScreen())),
+            backgroundColor: Colors.blueGrey,
+            child: const Icon(Icons.qr_code_scanner),
+          ),
+          const SizedBox(height: 16),
+          FloatingActionButton.extended(
+            heroTag: "btn_nuevo_prod",
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FormProductoScreen())),
+            icon: const Icon(Icons.add),
+            label: const Text("Nuevo Producto"),
+          ),
+        ],
       ),
       
       body: Consumer<InventarioProvider>(

@@ -13,8 +13,9 @@ class InventarioProvider with ChangeNotifier {
     int stock,
     double costo,
     String desc,
+    String? barcode,
   ) async {
-    await _repository.agregarProducto(nombre, stock, costo, desc);
+    await _repository.agregarProducto(nombre, stock, costo, desc, barcode);
     notifyListeners();
   }
 
@@ -26,6 +27,10 @@ class InventarioProvider with ChangeNotifier {
   Future<void> deleteProducto(String id) async {
     await _repository.deleteProducto(id);
     notifyListeners();
+  }
+
+  Future<Producto?> buscarProductoPorBarcode(String barcode) async {
+    return await _repository.getProductoByBarcode(barcode);
   }
 
   Future<void> reponerStock(Producto p, int cantidad) async {

@@ -17,6 +17,7 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
   late TextEditingController _stockCtrl;
   late TextEditingController _costoCtrl;
   late TextEditingController _descCtrl;
+  late TextEditingController _barcodeCtrl;
 
   @override
   void initState() {
@@ -25,6 +26,7 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
     _stockCtrl = TextEditingController(text: widget.producto?.stock.toString() ?? '');
     _costoCtrl = TextEditingController(text: widget.producto?.precioCosto.toString() ?? '');
     _descCtrl = TextEditingController(text: widget.producto?.descripcion ?? '');
+    _barcodeCtrl = TextEditingController(text: widget.producto?.barcode ?? '');
   }
 
   void _guardar() {
@@ -35,9 +37,10 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
     final stock = int.parse(_stockCtrl.text);
     final costo = double.parse(_costoCtrl.text);
     final desc = _descCtrl.text.trim();
+    final barcode = _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim();
 
     if (widget.producto == null) {
-      provider.addProducto(nombre, stock, costo, desc);
+      provider.addProducto(nombre, stock, costo, desc, barcode);
     } else {
       // Crear objeto actualizado manteniendo el ID original
       final actualizado = Producto(
@@ -46,6 +49,7 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
         stock: stock,
         precioCosto: costo,
         descripcion: desc,
+        barcode: barcode,
       );
       provider.updateProducto(actualizado);
     }
@@ -94,6 +98,15 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
                 controller: _descCtrl,
                 decoration: const InputDecoration(labelText: "Descripción (Opcional)"),
                 maxLines: 3,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _barcodeCtrl,
+                decoration: const InputDecoration(
+                  labelText: "Código de Barras",
+                  prefixIcon: Icon(Icons.qr_code_scanner),
+                ),
+                textInputAction: TextInputAction.done,
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
