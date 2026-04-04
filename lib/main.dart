@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'firebase_options.dart';
 
 // Utils
@@ -28,6 +29,17 @@ void main() async {
   await dotenv.load(fileName: ".env");
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Si la aplicación se usa en la Web, usar ReCaptchaEnterpriseProvider en lugar de ReCaptchaV3Provider, o
+  // leer la llave desde el entorno, de otro modo podría causar un crash si no hay llave.
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.playIntegrity,
+    appleProvider: AppleProvider.deviceCheck,
+    // Asegurarse de tener 'RECAPTCHA_V3_SITE_KEY' configurado en .env para Web.
+    webProvider: dotenv.env['RECAPTCHA_V3_SITE_KEY'] != null
+        ? ReCaptchaV3Provider(dotenv.env['RECAPTCHA_V3_SITE_KEY']!)
+        : ReCaptchaV3Provider('dummy-key'),
+  );
 
   // CONFIGURACIÓN DE PERSISTENCIA
   FirebaseFirestore.instance.settings = const Settings(

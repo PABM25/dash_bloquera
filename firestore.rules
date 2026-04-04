@@ -26,7 +26,12 @@ service cloud.firestore {
     // 2. PRODUCTOS
     match /productos/{productoId} {
       allow read: if isAuthenticated();
-      allow write: if canWrite(); /
+      allow write: if canWrite();
+    }
+
+    match /presupuestos/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if canWrite();
     }
 
     // 3. MOVIMIENTOS DE INVENTARIO
