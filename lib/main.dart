@@ -10,6 +10,7 @@ import 'firebase_options.dart';
 import 'utils/app_theme.dart';
 
 // Providers
+import 'providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/inventario_provider.dart';
 import 'providers/ventas_provider.dart';
@@ -44,6 +45,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => InventarioProvider()),
         ChangeNotifierProvider(create: (_) => VentasProvider()),
@@ -57,19 +59,25 @@ class MyApp extends StatelessWidget {
               DashboardProvider(ventas, finanzas),
         ),
       ],
-      child: MaterialApp(
-        title: 'Dash Bloquera',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        localizationsDelegates: const [
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Dash Bloquera',
+            debugShowCheckedModeBanner: false,
+            themeMode: themeProvider.themeMode,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: const [
-          Locale('es', 'ES'), 
-        ],
-        home: const AuthWrapper(),
+            supportedLocales: const [
+              Locale('es', 'ES'),
+            ],
+            home: const AuthWrapper(),
+          );
+        },
       ),
     );
   }

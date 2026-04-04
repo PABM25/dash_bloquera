@@ -73,6 +73,9 @@ class PresupuestosProvider with ChangeNotifier {
         return nuevoPresupuestoRef.id;
       });
     } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        throw Exception("No hay conexión a Internet. Las cotizaciones requieren red para generar su número de folio.");
+      }
       rethrow;
     } finally {
       _isLoading = false;
