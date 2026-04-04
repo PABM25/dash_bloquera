@@ -11,6 +11,7 @@ import '../screens/rh/calculo_salario_screen.dart';
 import '../screens/finanzas/lista_gastos_screen.dart';
 import '../screens/settings/user_settings_screen.dart';
 import '../utils/app_theme.dart';
+import '../providers/theme_provider.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -103,6 +104,19 @@ class AppDrawer extends StatelessWidget {
             ),
           ),
           const Divider(),
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              return SwitchListTile(
+                title: const Text("Modo Oscuro"),
+                secondary: Icon(isDark ? Icons.dark_mode : Icons.light_mode, color: AppTheme.primary),
+                value: isDark,
+                onChanged: (value) {
+                  themeProvider.toggleTheme(value);
+                },
+              );
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.exit_to_app, color: Colors.red),
             title: const Text(
@@ -111,6 +125,7 @@ class AppDrawer extends StatelessWidget {
             ),
             onTap: () => auth.logout(),
           ),
+          const SizedBox(height: 20),
         ],
       ),
     );

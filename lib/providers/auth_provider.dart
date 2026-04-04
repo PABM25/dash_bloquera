@@ -12,6 +12,7 @@ class AuthProvider with ChangeNotifier {
   // Gestión de Roles
   String? _role;
   String? get role => _role;
+  bool get isDemo => _role == 'demo';
 
   // Cargar rol al iniciar sesión
   Future<void> fetchUserRole() async {

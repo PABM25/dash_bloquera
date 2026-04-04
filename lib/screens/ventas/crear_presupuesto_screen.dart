@@ -83,12 +83,12 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                 Expanded(
                   child: ListView.separated(
                     itemCount: productos.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (context, index) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final p = productos[index];
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: AppTheme.primary.withOpacity(0.1),
+                          backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
                           child: Icon(Icons.inventory_2_outlined, color: AppTheme.primary),
                         ),
                         title: Text(p.nombre, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -463,7 +463,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                           child: ListTile(
                             contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                             leading: CircleAvatar(
-                              backgroundColor: esServicio ? Colors.orange[50] : AppTheme.primary.withOpacity(0.1),
+                              backgroundColor: esServicio ? Colors.orange[50] : AppTheme.primary.withValues(alpha: 0.1),
                               child: Icon(
                                 esServicio ? Icons.handyman : Icons.inventory_2, 
                                 color: esServicio ? Colors.orange[800] : AppTheme.primary, 

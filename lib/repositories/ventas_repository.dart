@@ -8,14 +8,34 @@ class VentasRepository {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Stream<List<Venta>> getVentasStream() {
+  // Original stream definition with optional limit
+  Stream<List<Venta>> getVentasStream({int limit = 100}) {
     return _db
         .collection('ventas')
         .orderBy('fecha', descending: true)
+        .limit(limit)
         .snapshots()
         .map(
           (snap) => snap.docs.map((doc) => Venta.fromFirestore(doc)).toList(),
         );
+  }
+
+  // Future for pagination
+  Future<Map<String, dynamic>> getVentasPaginadas({int limit = 20, DocumentSnapshot? startAfter}) async {
+    Query query = _db.collection('ventas').orderBy('fecha', descending: true).limit(limit);
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+
+    final snap = await query.get();
+
+    final ventas = snap.docs.map((doc) => Venta.fromFirestore(doc)).toList();
+    final lastDoc = snap.docs.isNotEmpty ? snap.docs.last : null;
+
+    return {
+      'ventas': ventas,
+      'lastDoc': lastDoc,
+    };
   }
 
   Future<void> crearVentaTransaccion({

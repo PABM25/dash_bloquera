@@ -403,7 +403,7 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: carrito.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final item = carrito[index];
                 return Card(
@@ -415,7 +415,7 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
                   ),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: AppTheme.primary.withOpacity(0.1),
+                      backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
                       child: Text("${item.cantidad}", style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
                     ),
                     title: Text(item.nombre, style: const TextStyle(fontWeight: FontWeight.w600)),

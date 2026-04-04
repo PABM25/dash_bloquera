@@ -49,7 +49,7 @@ class PresupuestosProvider with ChangeNotifier {
         final folio = "COT-$year-${nextId.toString().padLeft(4, '0')}";
 
         // 2. Calcular Total
-        final double total = items.fold(0, (sum, item) => sum + item.totalLinea);
+        final double total = items.fold(0, (currentSum, item) => currentSum + item.totalLinea);
 
         // 3. Crear Referencia de Documento
         final nuevoPresupuestoRef = _firestore.collection('presupuestos').doc();
@@ -73,6 +73,9 @@ class PresupuestosProvider with ChangeNotifier {
         return nuevoPresupuestoRef.id;
       });
     } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        throw Exception("No hay conexión a Internet. Las cotizaciones requieren red para generar su número de folio.");
+      }
       rethrow;
     } finally {
       _isLoading = false;

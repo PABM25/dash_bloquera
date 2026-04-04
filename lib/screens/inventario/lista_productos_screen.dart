@@ -5,6 +5,7 @@ import '../../providers/inventario_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/producto_modelo.dart';
 import 'form_producto_screen.dart';
+import '../../utils/export_util.dart';
 
 class ListaProductosScreen extends StatelessWidget {
   const ListaProductosScreen({super.key});
@@ -18,7 +19,30 @@ class ListaProductosScreen extends StatelessWidget {
     final bool esSoloLectura = authProvider.role == 'demo';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Inventario Maestro')),
+      appBar: AppBar(
+        title: const Text('Inventario Maestro'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: 'Exportar CSV',
+            onPressed: () async {
+              final prodProvider = Provider.of<InventarioProvider>(context, listen: false);
+              final List<Producto> productos = await prodProvider.productosStream.first;
+              if (productos.isNotEmpty) {
+                List<List<dynamic>> rows = [
+                  ["ID", "Nombre", "Descripción", "Stock", "Precio Costo"]
+                ];
+                for (var p in productos) {
+                  rows.add([p.id, p.nombre, p.descripcion ?? "", p.stock, p.precioCosto]);
+                }
+                if (context.mounted) {
+                  await ExportUtil.exportToCSV(context, rows, "inventario_maestro");
+                }
+              }
+            },
+          )
+        ],
+      ),
       
       // 2. Ocultar botón si es solo lectura
       floatingActionButton: esSoloLectura ? null : FloatingActionButton.extended(

@@ -55,6 +55,9 @@ dependencies:
   flutter_dotenv: ^6.0.0
   rxdart: ^0.28.0
   matcher: ^0.12.17
+  csv: ^8.0.0
+  path_provider: ^2.1.5
+  share_plus: ^12.0.2
 
 
 dev_dependencies:
