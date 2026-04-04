@@ -22,6 +22,7 @@ class InventarioRepository {
     int stock,
     double costo,
     String desc,
+    String? barcode,
   ) async {
     WriteBatch batch = _db.batch();
 
@@ -31,6 +32,7 @@ class InventarioRepository {
       'stock': stock,
       'precio_costo': costo,
       'descripcion': desc,
+      'barcode': barcode,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
@@ -61,6 +63,19 @@ class InventarioRepository {
 
   Future<void> deleteProducto(String id) async {
     await _db.collection('productos').doc(id).delete();
+  }
+
+  // Método para buscar producto por código de barras
+  Future<Producto?> getProductoByBarcode(String barcode) async {
+    final query = await _db
+        .collection('productos')
+        .where('barcode', isEqualTo: barcode)
+        .limit(1)
+        .get();
+
+    if (query.docs.isEmpty) return null;
+
+    return Producto.fromFirestore(query.docs.first);
   }
 
   // Método para añadir stock (Reposición)
