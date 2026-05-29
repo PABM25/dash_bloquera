@@ -28,7 +28,7 @@ jobs:
         run: flutter pub get
 
       - name: Create dummy .env for tests
-        run: touch .env && echo "dummy=1" > .env
+        run: cp .env.example .env
 
       - name: Analyze project source
         run: flutter analyze
