@@ -83,17 +83,20 @@ class _ListaVentasScreenState extends State<ListaVentasScreen> {
 
           return RefreshIndicator(
             onRefresh: () => provider.fetchVentas(refresh: true),
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.only(bottom: 80),
-              itemCount: ventas.length + (provider.hasMore ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == ventas.length) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.only(bottom: 80),
+                  itemCount: ventas.length + (provider.hasMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == ventas.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
                 final venta = ventas[index];
                   Color estadoColor = venta.estadoPago == 'PAGADA' ? Colors.green : Colors.orange;
                   String estadoTexto = venta.estadoPago;
@@ -129,10 +132,8 @@ class _ListaVentasScreenState extends State<ListaVentasScreen> {
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          // CAMBIO: withOpacity -> withValues
                           color: estadoColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
-                          // CAMBIO: withOpacity -> withValues
                           border: Border.all(color: estadoColor.withValues(alpha: 0.5)),
                         ),
                         child: Text(
@@ -140,14 +141,16 @@ class _ListaVentasScreenState extends State<ListaVentasScreen> {
                           style: TextStyle(color: estadoColor, fontWeight: FontWeight.bold, fontSize: 11),
                         ),
                       ),
-                    onTap: () {
-                      Navigator.push(context, MaterialPageRoute(
-                        builder: (_) => DetalleVentaScreen(ventaInicial: venta)
-                      ));
-                    },
-                  ),
-                );
-              },
+                        onTap: () {
+                          Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => DetalleVentaScreen(ventaInicial: venta)
+                          ));
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           );
         },

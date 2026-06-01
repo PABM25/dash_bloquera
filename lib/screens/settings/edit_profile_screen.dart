@@ -26,15 +26,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     
     final error = await Provider.of<AuthProvider>(context, listen: false).updateName(_nameCtrl.text.trim());
     
+    if (!mounted) return;
     setState(() => _isLoading = false);
     
     if (error == null) {
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Perfil actualizado"), backgroundColor: Colors.green));
-      }
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Perfil actualizado"), backgroundColor: Colors.green));
     } else {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 

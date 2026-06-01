@@ -32,15 +32,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       _newPassCtrl.text,
     );
 
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (error == null) {
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Contraseña actualizada exitosamente"), backgroundColor: Colors.green));
-      }
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Contraseña actualizada exitosamente"), backgroundColor: Colors.green));
     } else {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), backgroundColor: Colors.red));
     }
   }
 

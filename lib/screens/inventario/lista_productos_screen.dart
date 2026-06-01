@@ -100,15 +100,18 @@ class ListaProductosScreen extends StatelessWidget {
 
               final productos = snapshot.data!;
               
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: productos.length,
-                itemBuilder: (context, index) {
-                  final prod = productos[index];
-                  return Card( // Agregamos un Card para mejor visualización
-                    elevation: 2,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: productos.length,
+                    itemBuilder: (context, index) {
+                      final prod = productos[index];
+                      return Card( // Agregamos un Card para mejor visualización
+                        elevation: 2,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: prod.stock < 10 ? Colors.red[100] : Colors.blue[100],
                         child: Icon(
@@ -124,12 +127,14 @@ class ListaProductosScreen extends StatelessWidget {
                             icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () => _confirmarEliminar(context, provider, prod),
                           ),
-                      onTap: esSoloLectura ? null : () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => FormProductoScreen(producto: prod)));
-                      },
-                    ),
-                  );
-                },
+                          onTap: esSoloLectura ? null : () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => FormProductoScreen(producto: prod)));
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
               );
             },
           );

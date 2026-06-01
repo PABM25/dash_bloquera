@@ -115,10 +115,13 @@ class DetalleVentaScreen extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(title: Text("Folio: ${venta.folio}")),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Tarjeta de Resumen Financiero
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Tarjeta de Resumen Financiero
               Card(
                 elevation: 4,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -217,11 +220,13 @@ class DetalleVentaScreen extends StatelessWidget {
                         foregroundColor: Colors.white,
                       ),
                     ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 20),
                 ],
               ),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
         );
       },

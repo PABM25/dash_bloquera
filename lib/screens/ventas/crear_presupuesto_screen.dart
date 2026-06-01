@@ -342,11 +342,14 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    // Datos Cliente
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        // Datos Cliente
                     Card(
                       elevation: 3,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -490,8 +493,10 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                         );
                       }),
                     
-                    const SizedBox(height: 80), // Espacio para el botón flotante inferior
-                  ],
+                        const SizedBox(height: 80), // Espacio para el botón flotante inferior
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

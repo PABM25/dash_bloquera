@@ -33,9 +33,12 @@ void main() async {
   // Si la aplicación se usa en la Web, usar ReCaptchaEnterpriseProvider en lugar de ReCaptchaV3Provider, o
   // leer la llave desde el entorno, de otro modo podría causar un crash si no hay llave.
   await FirebaseAppCheck.instance.activate(
+    // ignore: deprecated_member_use
     androidProvider: AndroidProvider.playIntegrity,
+    // ignore: deprecated_member_use
     appleProvider: AppleProvider.deviceCheck,
     // Asegurarse de tener 'RECAPTCHA_V3_SITE_KEY' configurado en .env para Web.
+    // ignore: deprecated_member_use
     webProvider: dotenv.env['RECAPTCHA_V3_SITE_KEY'] != null
         ? ReCaptchaV3Provider(dotenv.env['RECAPTCHA_V3_SITE_KEY']!)
         : ReCaptchaV3Provider('dummy-key'),
