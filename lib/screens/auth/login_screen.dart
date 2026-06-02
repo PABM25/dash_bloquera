@@ -6,6 +6,8 @@ import '../../providers/ventas_provider.dart';
 import '../../providers/rh_provider.dart';
 import '../../providers/finanzas_provider.dart';
 import '../../providers/proveedores_provider.dart';
+import '../../providers/compras_provider.dart';
+import '../../providers/presupuestos_provider.dart';
 import '../../utils/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -150,6 +152,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Provider.of<RhProvider>(context, listen: false).useMockRepository();
                                   Provider.of<FinanzasProvider>(context, listen: false).useMockRepository();
                                   Provider.of<ProveedoresProvider>(context, listen: false).useMockRepository();
+                                  Provider.of<ComprasProvider>(context, listen: false).useMockRepository();
+                                  Provider.of<PresupuestosProvider>(context, listen: false).useMockRepository();
                                 }
                               }
                               setState(() => _isLoading = false);

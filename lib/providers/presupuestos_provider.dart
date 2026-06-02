@@ -2,15 +2,23 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/presupuesto_model.dart';
 import '../models/venta_model.dart'; // Para ItemOrden
+import '../repositories/mock_presupuestos_repository.dart';
 
 class PresupuestosProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  MockPresupuestosRepository? _mockRepo;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  void useMockRepository() {
+    _mockRepo = MockPresupuestosRepository();
+    notifyListeners();
+  }
+
   // Obtener lista de presupuestos en tiempo real
   Stream<List<Presupuesto>> get presupuestosStream {
+    if (_mockRepo != null) return _mockRepo!.presupuestosStream;
     return _firestore
         .collection('presupuestos')
         .orderBy('fecha_emision', descending: true)

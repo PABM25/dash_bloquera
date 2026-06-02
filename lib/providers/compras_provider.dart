@@ -2,13 +2,21 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/compra_model.dart';
 import '../providers/inventario_provider.dart';
+import '../repositories/mock_compras_repository.dart';
 
 class ComprasProvider with ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  MockComprasRepository? _mockRepo;
 
   ComprasProvider(InventarioProvider invProvider);
 
+  void useMockRepository() {
+    _mockRepo = MockComprasRepository();
+    notifyListeners();
+  }
+
   Stream<List<Compra>> get comprasStream {
+    if (_mockRepo != null) return _mockRepo!.comprasStream;
     return _db.collection('compras').orderBy('fecha', descending: true).snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => Compra.fromFirestore(doc)).toList();
     });

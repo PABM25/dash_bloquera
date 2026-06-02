@@ -3,6 +3,7 @@ import '../models/venta_model.dart';
 import '../models/trabajador_model.dart';
 import '../models/proveedor_model.dart';
 import '../models/gasto_model.dart';
+import '../models/compra_model.dart';
 
 class MockData {
   static final List<Producto> productos = [
@@ -57,5 +58,19 @@ class MockData {
   static final List<Gasto> gastos = [
     Gasto(id: 'g1', descripcion: 'Reparación de cinta', monto: 50000, fecha: DateTime.now().subtract(const Duration(days: 2)), categoria: 'MANTENCION', tipoProyecto: 'BLOQUERA'),
     Gasto(id: 'g2', descripcion: 'Pago de luz', monto: 120000, fecha: DateTime.now().subtract(const Duration(days: 5)), categoria: 'SERVICIOS', tipoProyecto: 'BLOQUERA'),
+  ];
+
+  static final List<Compra> compras = [
+    Compra(
+      id: 'c1',
+      folio: 'COM-2025-0001',
+      proveedorId: 'pr1',
+      proveedorNombre: 'Cemento S.A.',
+      fecha: DateTime.now().subtract(const Duration(days: 3)),
+      total: 350000,
+      items: [
+        CompraItem(productoId: 'p3', nombre: 'Cemento 25kg', cantidad: 100, costoUnitario: 3500, totalLinea: 350000),
+      ],
+    ),
   ];
 }
