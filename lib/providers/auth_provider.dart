@@ -17,6 +17,14 @@ class AuthProvider with ChangeNotifier {
   // Cargar rol al iniciar sesión
   Future<void> fetchUserRole() async {
     if (currentUser == null) return;
+
+    // Si es un usuario anónimo, le asignamos el rol 'demo'
+    if (currentUser!.isAnonymous) {
+      _role = 'demo';
+      notifyListeners();
+      return;
+    }
+
     try {
       final doc = await _db.collection('users').doc(currentUser!.uid).get();
       if (doc.exists) {
@@ -25,6 +33,17 @@ class AuthProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint("Error fetching role: $e");
+    }
+  }
+
+  // --- LOGIN DEMO (Anónimo) ---
+  Future<String?> loginAsDemo() async {
+    try {
+      await _auth.signInAnonymously();
+      await fetchUserRole();
+      return null;
+    } catch (e) {
+      return 'Error al ingresar como demo: $e';
     }
   }
 

@@ -123,6 +123,35 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(color: Colors.white, fontSize: 16, letterSpacing: 1),
                         ),
                       ),
+                    const SizedBox(height: 16),
+                    OutlinedButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () async {
+                              setState(() => _isLoading = true);
+                              final error = await Provider.of<AuthProvider>(
+                                context,
+                                listen: false,
+                              ).loginAsDemo();
+                              if (!mounted) return;
+                              setState(() => _isLoading = false);
+                              if (error != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(error),
+                                      backgroundColor: Colors.red),
+                                );
+                              }
+                            },
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        side: const BorderSide(color: AppTheme.primary),
+                      ),
+                      child: const Text(
+                        "VER DEMO",
+                        style: TextStyle(color: AppTheme.primary, fontSize: 16),
+                      ),
+                    ),
                   ],
                 ),
               ),

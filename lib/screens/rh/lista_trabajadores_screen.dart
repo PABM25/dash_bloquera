@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/rh_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/trabajador_model.dart';
 import '../../utils/formatters.dart';
 import 'form_trabajador_screen.dart';
@@ -10,9 +11,11 @@ class ListaTrabajadoresScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDemo = Provider.of<AuthProvider>(context).isDemo;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Personal')),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: isDemo ? null : FloatingActionButton(
         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FormTrabajadorScreen())),
         child: const Icon(Icons.person_add),
       ),
@@ -37,7 +40,7 @@ class ListaTrabajadoresScreen extends StatelessWidget {
                     ),
                     title: Text(t.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text("${t.cargo ?? 'Sin cargo'} | ${Formatters.formatCurrency(t.salarioPorDia)}/día"),
-                    trailing: Row(
+                    trailing: isDemo ? null : Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart'; // [IMPORTANTE] Para formatear moneda
+import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../models/dashboard_summary.dart';
 import '../../widgets/app_drawer.dart';
@@ -17,6 +18,8 @@ class HomeScreen extends StatelessWidget {
     final currencyFormat = NumberFormat.compactCurrency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
     // Si prefieres ver los números completos (ej: $ 1.500.000) usa este otro:
     // final currencyFormat = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
+
+    final isDemo = Provider.of<AuthProvider>(context).isDemo;
 
     return Consumer<DashboardProvider>(
       builder: (context, dashboardProv, _) {
@@ -45,6 +48,29 @@ class HomeScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (isDemo)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(bottom: 20),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.amber.shade300),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.info_outline, color: Colors.amber),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    "Modo Demostración - Solo Lectura. Las funciones de creación, edición y eliminación están deshabilitadas.",
+                                    style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         const Text(
                           "Resumen Financiero",
                           style: TextStyle(

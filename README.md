@@ -33,6 +33,7 @@
 
 ### 🔐 Seguridad y Conectividad (Preparado para Producción)
 * **Role-Based Access Control (RBAC):** Cuentas con roles (incluyendo un flag \`isDemo\` en \`AuthProvider\` para limitar ediciones en demostraciones).
+* **Modo Demostración (Portfolio):** Permite a visitantes explorar la funcionalidad completa de la aplicación sin necesidad de registro, mediante un acceso anónimo de solo lectura.
 * **Firebase App Check:** Prevención contra fraudes usando *Play Integrity* (Android), *DeviceCheck* (Apple) y *ReCaptchaV3* (Web).
 * **Arquitectura Offline:** Manejo limpio de \`FirebaseException\` ("unavailable") para transacciones y paginación Firestore.
 * **Tema Adaptable:** Soporte global para Dark Mode vía \`ThemeProvider\`.
@@ -102,6 +103,20 @@ firebase deploy --only firestore:rules
 flutter run
 \`\`\`
 *(O utiliza \`flutter build apk\` / \`flutter build web\` para compilar a producción).*
+
+---
+
+## 🌟 Modo Demo para Portafolio
+
+Este proyecto incluye una funcionalidad de **"VER DEMO"** diseñada específicamente para reclutadores o interesados que deseen probar la aplicación sin configurar Firebase ni crear una cuenta:
+
+1. Al iniciar la app, selecciona el botón **"VER DEMO"**.
+2. La aplicación iniciará sesión de forma anónima y asignará automáticamente el rol `demo`.
+3. **Restricciones del modo Demo:**
+   - La interfaz oculta los botones de creación (Floating Action Buttons).
+   - Se deshabilitan las acciones de edición y eliminación.
+   - Un banner informativo en el Dashboard indica que se encuentra en modo de solo lectura.
+   - Las *Firestore Security Rules* están configuradas para rechazar cualquier intento de escritura desde una cuenta con rol `demo`.
 
 ---
 

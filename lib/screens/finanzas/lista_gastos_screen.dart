@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/finanzas_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/gasto_model.dart';
 import '../../utils/formatters.dart';
 import 'form_gasto_screen.dart';
@@ -10,9 +11,11 @@ class ListaGastosScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDemo = Provider.of<AuthProvider>(context).isDemo;
+
     return Scaffold(
       appBar: AppBar(title: const Text("Gastos")),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: isDemo ? null : FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const FormGastoScreen()),
@@ -59,7 +62,7 @@ class ListaGastosScreen extends StatelessWidget {
                         fontSize: 16,
                       ),
                     ),
-                    onLongPress: () {
+                    onLongPress: isDemo ? null : () {
                       // Borrar gasto
                       provider.deleteGasto(g.id);
                     },
