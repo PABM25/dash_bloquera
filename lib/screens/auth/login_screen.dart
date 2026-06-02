@@ -129,18 +129,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? null
                           : () async {
                               setState(() => _isLoading = true);
-                              final error = await Provider.of<AuthProvider>(
+                              final authProvider = Provider.of<AuthProvider>(
                                 context,
                                 listen: false,
-                              ).loginAsDemo();
+                              );
+                              final error = await authProvider.loginAsDemo();
+
                               if (!mounted) return;
                               setState(() => _isLoading = false);
+
                               if (error != null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(error),
-                                      backgroundColor: Colors.red),
-                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(error),
+                                        backgroundColor: Colors.red),
+                                  );
+                                }
                               }
                             },
                       style: OutlinedButton.styleFrom(
