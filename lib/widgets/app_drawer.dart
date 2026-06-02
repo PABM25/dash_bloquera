@@ -12,6 +12,9 @@ import '../screens/finanzas/lista_gastos_screen.dart';
 import '../screens/settings/user_settings_screen.dart';
 import '../utils/app_theme.dart';
 import '../providers/theme_provider.dart';
+import '../screens/compras/lista_proveedores_screen.dart';
+import '../screens/compras/lista_compras_screen.dart';
+import '../screens/ventas/despachos_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -56,6 +59,12 @@ class AppDrawer extends StatelessWidget {
                   "Ventas",
                   const ListaVentasScreen(),
                 ),
+                _buildItem(
+                  context,
+                  Icons.local_shipping,
+                  "Despachos",
+                  const DespachosScreen(),
+                ),
                 // --- NUEVO ÍTEM AGREGADO ---
                 _buildItem(
                   context,
@@ -64,6 +73,27 @@ class AppDrawer extends StatelessWidget {
                   const CrearPresupuestoScreen(),
                 ),
                 // ---------------------------
+
+                const Divider(),
+                const Padding(
+                  padding: EdgeInsets.only(left: 16, top: 10, bottom: 5),
+                  child: Text(
+                    "COMPRAS Y PROVEEDORES",
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ),
+                _buildItem(
+                  context,
+                  Icons.store,
+                  "Proveedores",
+                  const ListaProveedoresScreen(),
+                ),
+                _buildItem(
+                  context,
+                  Icons.shopping_bag,
+                  "Compras",
+                  const ListaComprasScreen(),
+                ),
 
                 const Divider(),
                 const Padding(
