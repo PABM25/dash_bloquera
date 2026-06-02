@@ -72,7 +72,7 @@ class HomeScreen extends StatelessWidget {
                               mainAxisSpacing: 16,
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              childAspectRatio: crossAxisCount == 1 ? 2.5 : 1.5,
+                              childAspectRatio: crossAxisCount == 1 ? 2.2 : 1.5,
                               children: [
                             // Tarjeta INGRESOS
                             KpiCard(
