@@ -2,10 +2,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/gasto_model.dart';
 
+import '../repositories/mock_finanzas_repository.dart';
+
 class FinanzasProvider with ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  MockFinanzasRepository? _mockRepo;
+
+  void useMockRepository() {
+    _mockRepo = MockFinanzasRepository();
+    notifyListeners();
+  }
 
   Stream<List<Gasto>> get gastosStream {
+    if (_mockRepo != null) return _mockRepo!.gastosStream;
     return _db.collection('gastos').orderBy('fecha', descending: true).snapshots().map(
       (snap) => snap.docs.map((doc) => Gasto.fromFirestore(doc)).toList(),
     );

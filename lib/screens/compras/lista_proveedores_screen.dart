@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/proveedores_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/proveedor_model.dart';
 
 class ListaProveedoresScreen extends StatelessWidget {
@@ -8,9 +9,11 @@ class ListaProveedoresScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDemo = Provider.of<AuthProvider>(context).isDemo;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Directorio de Proveedores')),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: isDemo ? null : FloatingActionButton(
         onPressed: () => _mostrarDialogoProveedor(context),
         child: const Icon(Icons.add),
       ),
@@ -39,7 +42,7 @@ class ListaProveedoresScreen extends StatelessWidget {
                           title: Text(p.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: Text("RUT: ${p.rut}\nContacto: ${p.contacto}"),
                           isThreeLine: true,
-                          trailing: Row(
+                          trailing: isDemo ? null : Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(

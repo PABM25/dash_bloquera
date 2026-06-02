@@ -32,29 +32,46 @@ import 'widgets/offline_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Warning: .env file not found. Using dummy values for demo.");
+  }
+
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (e) {
+    debugPrint("Warning: Firebase initialization failed. App will only work in Mock/Demo mode.");
+  }
 
   // Si la aplicación se usa en la Web, usar ReCaptchaEnterpriseProvider en lugar de ReCaptchaV3Provider, o
   // leer la llave desde el entorno, de otro modo podría causar un crash si no hay llave.
-  await FirebaseAppCheck.instance.activate(
-    // ignore: deprecated_member_use
-    androidProvider: AndroidProvider.playIntegrity,
-    // ignore: deprecated_member_use
-    appleProvider: AppleProvider.deviceCheck,
-    // Asegurarse de tener 'RECAPTCHA_V3_SITE_KEY' configurado en .env para Web.
-    // ignore: deprecated_member_use
-    webProvider: dotenv.env['RECAPTCHA_V3_SITE_KEY'] != null
-        ? ReCaptchaV3Provider(dotenv.env['RECAPTCHA_V3_SITE_KEY']!)
-        : ReCaptchaV3Provider('dummy-key'),
-  );
+  try {
+    await FirebaseAppCheck.instance.activate(
+      // ignore: deprecated_member_use
+      androidProvider: AndroidProvider.playIntegrity,
+      // ignore: deprecated_member_use
+      appleProvider: AppleProvider.deviceCheck,
+      // Asegurarse de tener 'RECAPTCHA_V3_SITE_KEY' configurado en .env para Web.
+      // ignore: deprecated_member_use
+      webProvider: dotenv.env['RECAPTCHA_V3_SITE_KEY'] != null
+          ? ReCaptchaV3Provider(dotenv.env['RECAPTCHA_V3_SITE_KEY']!)
+          : ReCaptchaV3Provider('dummy-key'),
+    );
+  } catch (e) {
+    debugPrint("Warning: AppCheck activation failed.");
+  }
 
   // CONFIGURACIÓN DE PERSISTENCIA
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
-    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-  );
+  try {
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  } catch (e) {
+    debugPrint("Warning: Firestore settings configuration failed.");
+  }
 
   runApp(const MyApp());
 }
@@ -127,7 +144,7 @@ class AuthWrapper extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (snapshot.hasData) {
+        if (snapshot.hasData || authProvider.isDemo) {
           return const HomeScreen();
         }
         return const LoginScreen();

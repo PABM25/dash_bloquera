@@ -2,9 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/venta_model.dart';
 import '../repositories/ventas_repository.dart';
+import '../repositories/mock_ventas_repository.dart';
 
 class VentasProvider with ChangeNotifier {
-  final VentasRepository _repository = VentasRepository();
+  VentasRepository _repository = VentasRepository();
+
+  void useMockRepository() {
+    _repository = MockVentasRepository();
+    notifyListeners();
+  }
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -22,6 +28,18 @@ class VentasProvider with ChangeNotifier {
   }
 
   Future<void> fetchVentas({bool refresh = false}) async {
+    if (_repository is MockVentasRepository) {
+      // Si es mock, simplemente usamos el stream o cargamos datos estáticos una vez
+      if (_ventas.isEmpty) {
+        _repository.getVentasStream().listen((data) {
+          _ventas.clear();
+          _ventas.addAll(data);
+          notifyListeners();
+        });
+      }
+      return;
+    }
+
     if (_isLoading) return;
 
     if (refresh) {

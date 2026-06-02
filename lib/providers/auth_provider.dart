@@ -17,6 +17,14 @@ class AuthProvider with ChangeNotifier {
   // Cargar rol al iniciar sesión
   Future<void> fetchUserRole() async {
     if (currentUser == null) return;
+
+    // Si es un usuario anónimo, le asignamos el rol 'demo'
+    if (currentUser!.isAnonymous) {
+      _role = 'demo';
+      notifyListeners();
+      return;
+    }
+
     try {
       final doc = await _db.collection('users').doc(currentUser!.uid).get();
       if (doc.exists) {
@@ -25,6 +33,26 @@ class AuthProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint("Error fetching role: $e");
+    }
+  }
+
+  // --- LOGIN DEMO (Anónimo) ---
+  Future<String?> loginAsDemo() async {
+    try {
+      if (_auth.app.name != '[DEFAULT]') {
+         // Fallback si Firebase no está inicializado
+         _role = 'demo';
+         notifyListeners();
+         return null;
+      }
+      await _auth.signInAnonymously();
+      await fetchUserRole();
+      return null;
+    } catch (e) {
+      // Fallback si falla el login anónimo (ej: sin internet o sin config)
+      _role = 'demo';
+      notifyListeners();
+      return null;
     }
   }
 

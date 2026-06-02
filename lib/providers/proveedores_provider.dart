@@ -2,10 +2,19 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/proveedor_model.dart';
 
+import '../repositories/mock_proveedores_repository.dart';
+
 class ProveedoresProvider with ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  MockProveedoresRepository? _mockRepo;
+
+  void useMockRepository() {
+    _mockRepo = MockProveedoresRepository();
+    notifyListeners();
+  }
 
   Stream<List<Proveedor>> get proveedoresStream {
+    if (_mockRepo != null) return _mockRepo!.proveedoresStream;
     return _db.collection('proveedores').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => Proveedor.fromFirestore(doc.data(), doc.id)).toList();
     });

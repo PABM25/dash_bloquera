@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/rh_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/trabajador_model.dart';
 import '../../utils/formatters.dart';
 
@@ -17,6 +18,8 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDemo = Provider.of<AuthProvider>(context).isDemo;
+
     return Scaffold(
       appBar: AppBar(title: const Text("Registrar Asistencia")),
       body: Padding(
@@ -79,7 +82,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _trabajadorSeleccionado == null ? null : () async {
+                onPressed: (_trabajadorSeleccionado == null || isDemo) ? null : () async {
                   final provider = Provider.of<RhProvider>(context, listen: false);
                   String? error = await provider.registrarAsistencia(
                     _trabajadorSeleccionado!.id,

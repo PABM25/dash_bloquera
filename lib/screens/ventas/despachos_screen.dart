@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/ventas_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class DespachosScreen extends StatelessWidget {
   const DespachosScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isDemo = Provider.of<AuthProvider>(context).isDemo;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Despachos Pendientes')),
       body: Consumer<VentasProvider>(
@@ -28,7 +31,7 @@ class DespachosScreen extends StatelessWidget {
                   title: Text("${v.folio} - ${v.cliente}"),
                   subtitle: Text(v.direccion ?? "Sin dirección"),
                   trailing: ElevatedButton(
-                    onPressed: () {
+                    onPressed: isDemo ? null : () {
                       provider.marcarEntrega(v.id, "ENTREGADO");
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Marcado como entregado")));
                     },

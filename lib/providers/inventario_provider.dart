@@ -1,9 +1,15 @@
 import 'package:flutter/foundation.dart';
 import '../models/producto_modelo.dart';
 import '../repositories/inventario_repository.dart';
+import '../repositories/mock_inventario_repository.dart';
 
 class InventarioProvider with ChangeNotifier {
-  final InventarioRepository _repository = InventarioRepository();
+  InventarioRepository _repository = InventarioRepository();
+
+  void useMockRepository() {
+    _repository = MockInventarioRepository();
+    notifyListeners();
+  }
 
   Stream<List<Producto>> get productosStream =>
       _repository.getProductosStream();

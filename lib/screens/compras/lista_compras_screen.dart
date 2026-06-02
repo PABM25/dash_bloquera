@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/compras_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/compra_model.dart';
 import 'crear_compra_screen.dart';
 
@@ -12,10 +13,11 @@ class ListaComprasScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+    final isDemo = Provider.of<AuthProvider>(context).isDemo;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Historial de Compras')),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: isDemo ? null : FloatingActionButton.extended(
         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrearCompraScreen())),
         label: const Text("Nueva Compra"),
         icon: const Icon(Icons.add_shopping_cart),
