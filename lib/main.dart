@@ -19,10 +19,16 @@ import 'providers/rh_provider.dart';
 import 'providers/finanzas_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/presupuestos_provider.dart'; // Ya lo tenías importado
+import 'providers/proveedores_provider.dart';
+import 'providers/compras_provider.dart';
+import 'providers/settings_provider.dart';
 
 // Screens
 import 'screens/auth/login_screen.dart';
 import 'screens/dashboard/home_screen.dart';
+
+// Widgets
+import 'widgets/offline_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,6 +67,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => InventarioProvider()),
         ChangeNotifierProvider(create: (_) => VentasProvider()),
@@ -68,6 +75,11 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FinanzasProvider()),
         // [CORRECCIÓN] Agregamos el proveedor de presupuestos aquí:
         ChangeNotifierProvider(create: (_) => PresupuestosProvider()), 
+        ChangeNotifierProvider(create: (_) => ProveedoresProvider()),
+
+        ProxyProvider<InventarioProvider, ComprasProvider>(
+          update: (_, inv, prev) => ComprasProvider(inv),
+        ),
 
         ProxyProvider2<VentasProvider, FinanzasProvider, DashboardProvider>(
           update: (_, ventas, finanzas, prev) =>
@@ -90,6 +102,9 @@ class MyApp extends StatelessWidget {
             supportedLocales: const [
               Locale('es', 'ES'),
             ],
+            builder: (context, child) {
+              return OfflineBanner(child: child!);
+            },
             home: const AuthWrapper(),
           );
         },

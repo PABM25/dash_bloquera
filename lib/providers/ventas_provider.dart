@@ -108,6 +108,21 @@ class VentasProvider with ChangeNotifier {
     );
   }
 
+  Future<void> marcarEntrega(String ventaId, String nuevoEstado) async {
+    await FirebaseFirestore.instance.collection('ventas').doc(ventaId).update({'estado_entrega': nuevoEstado});
+    // Actualizamos localmente si lo encontramos
+    final index = _ventas.indexWhere((v) => v.id == ventaId);
+    if (index != -1) {
+      final old = _ventas[index];
+      _ventas[index] = Venta(
+        id: old.id, folio: old.folio, fecha: old.fecha, cliente: old.cliente, rut: old.rut, direccion: old.direccion,
+        total: old.total, totalCosto: old.totalCosto, totalUtilidad: old.totalUtilidad, estadoPago: old.estadoPago,
+        montoPagado: old.montoPagado, items: old.items, estadoEntrega: nuevoEstado
+      );
+      notifyListeners();
+    }
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();

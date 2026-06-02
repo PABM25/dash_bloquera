@@ -8,8 +8,15 @@ import 'form_producto_screen.dart';
 import 'escaner_stock_screen.dart';
 import '../../utils/export_util.dart';
 
-class ListaProductosScreen extends StatelessWidget {
+class ListaProductosScreen extends StatefulWidget {
   const ListaProductosScreen({super.key});
+
+  @override
+  State<ListaProductosScreen> createState() => _ListaProductosScreenState();
+}
+
+class _ListaProductosScreenState extends State<ListaProductosScreen> {
+  String _searchQuery = "";
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +50,30 @@ class ListaProductosScreen extends StatelessWidget {
             },
           )
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60.0),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Buscar producto...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.all(0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase();
+                });
+              },
+            ),
+          ),
+        ),
       ),
       
       // 2. Ocultar botón si es solo lectura
@@ -98,8 +129,16 @@ class ListaProductosScreen extends StatelessWidget {
                 );
               }
 
-              final productos = snapshot.data!;
+              final allProductos = snapshot.data!;
+              final productos = allProductos.where((p) {
+                return p.nombre.toLowerCase().contains(_searchQuery) ||
+                       (p.barcode?.toLowerCase().contains(_searchQuery) ?? false);
+              }).toList();
               
+              if (productos.isEmpty && _searchQuery.isNotEmpty) {
+                 return const Center(child: Text("No se encontraron productos coincidentes."));
+              }
+
               return Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1200),

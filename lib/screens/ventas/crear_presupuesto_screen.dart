@@ -7,6 +7,7 @@ import '../../models/venta_model.dart';
 import '../../models/presupuesto_model.dart';
 import '../../providers/inventario_provider.dart';
 import '../../providers/presupuestos_provider.dart';
+import '../../providers/settings_provider.dart';
 import '../../utils/pdf_generator.dart';
 import '../../utils/app_theme.dart'; // IMPORTANTE: Importamos tu tema
 
@@ -29,7 +30,9 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
   final currencyFormat = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
   final dateFormat = DateFormat('dd/MM/yyyy');
 
-  double get totalVenta => carrito.fold(0, (sum, item) => sum + item.totalLinea);
+  double get subtotalVenta => carrito.fold(0, (sum, item) => sum + item.totalLinea);
+  double get impuesto => subtotalVenta * Provider.of<SettingsProvider>(context, listen: false).taxRate;
+  double get totalVenta => subtotalVenta + impuesto;
 
   Future<void> _seleccionarFecha() async {
     final picked = await showDatePicker(

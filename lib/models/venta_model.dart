@@ -49,6 +49,7 @@ class Venta {
   final String estadoPago; // PENDIENTE, ABONADA, PAGADA
   final double montoPagado;
   final List<ItemOrden> items;
+  final String estadoEntrega; // PENDIENTE, ENTREGADO
 
   Venta({
     required this.id,
@@ -63,6 +64,7 @@ class Venta {
     required this.estadoPago,
     required this.montoPagado,
     required this.items,
+    this.estadoEntrega = 'PENDIENTE',
   });
 
   factory Venta.fromFirestore(DocumentSnapshot doc) {
@@ -80,6 +82,7 @@ class Venta {
       totalUtilidad: (data['total_utilidad'] ?? 0).toDouble(),
       estadoPago: data['estado_pago'] ?? 'PENDIENTE',
       montoPagado: (data['monto_pagado'] ?? 0).toDouble(),
+      estadoEntrega: data['estado_entrega'] ?? 'PENDIENTE',
       // Convertir la lista de mapas a lista de objetos ItemOrden
       items: (data['items'] as List<dynamic>? ?? [])
           .map((item) => ItemOrden.fromMap(item))
@@ -99,6 +102,7 @@ class Venta {
       'total_utilidad': totalUtilidad,
       'estado_pago': estadoPago,
       'monto_pagado': montoPagado,
+      'estado_entrega': estadoEntrega,
       'items': items.map((item) => item.toMap()).toList(),
     };
   }
