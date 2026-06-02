@@ -91,16 +91,18 @@ class _KpiCardState extends State<KpiCard> {
               const SizedBox(height: 10),
 
               // Valor Principal (Con ajuste automático de tamaño)
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    widget.value,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black87,
-                      letterSpacing: -0.5,
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      widget.value,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
+                        letterSpacing: -0.5,
+                      ),
                     ),
                   ),
                 ),
@@ -108,12 +110,15 @@ class _KpiCardState extends State<KpiCard> {
                 // Subtítulo
                 Row(
                   children: [
-                    Text(
-                      widget.subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: widget.color,
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Text(
+                        widget.subtitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: widget.color,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 4),
