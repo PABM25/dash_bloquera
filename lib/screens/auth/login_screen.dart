@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/inventario_provider.dart';
+import '../../providers/ventas_provider.dart';
+import '../../providers/rh_provider.dart';
+import '../../providers/finanzas_provider.dart';
+import '../../providers/proveedores_provider.dart';
 import '../../utils/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -136,6 +141,17 @@ class _LoginScreenState extends State<LoginScreen> {
                               final error = await authProvider.loginAsDemo();
 
                               if (!mounted) return;
+
+                              if (error == null) {
+                                if (context.mounted) {
+                                  // Activar modo MOCK en los proveedores
+                                  Provider.of<InventarioProvider>(context, listen: false).useMockRepository();
+                                  Provider.of<VentasProvider>(context, listen: false).useMockRepository();
+                                  Provider.of<RhProvider>(context, listen: false).useMockRepository();
+                                  Provider.of<FinanzasProvider>(context, listen: false).useMockRepository();
+                                  Provider.of<ProveedoresProvider>(context, listen: false).useMockRepository();
+                                }
+                              }
                               setState(() => _isLoading = false);
 
                               if (error != null) {

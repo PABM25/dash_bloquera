@@ -39,11 +39,20 @@ class AuthProvider with ChangeNotifier {
   // --- LOGIN DEMO (Anónimo) ---
   Future<String?> loginAsDemo() async {
     try {
+      if (_auth.app.name != '[DEFAULT]') {
+         // Fallback si Firebase no está inicializado
+         _role = 'demo';
+         notifyListeners();
+         return null;
+      }
       await _auth.signInAnonymously();
       await fetchUserRole();
       return null;
     } catch (e) {
-      return 'Error al ingresar como demo: $e';
+      // Fallback si falla el login anónimo (ej: sin internet o sin config)
+      _role = 'demo';
+      notifyListeners();
+      return null;
     }
   }
 

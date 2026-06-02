@@ -5,11 +5,20 @@ import 'package:firebase_core/firebase_core.dart'; // Necesario para la app secu
 import '../models/trabajador_model.dart';
 
 
+import '../repositories/mock_rh_repository.dart';
+
 class RhProvider with ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  MockRhRepository? _mockRepo;
+
+  void useMockRepository() {
+    _mockRepo = MockRhRepository();
+    notifyListeners();
+  }
 
 // --- TRABAJADORES ---
   Stream<List<Trabajador>> get trabajadoresStream {
+    if (_mockRepo != null) return _mockRepo!.trabajadoresStream;
     return _db.collection('trabajadores').orderBy('nombre').snapshots().map(
       (snap) => snap.docs.map((doc) => Trabajador.fromFirestore(doc)).toList(),
     );
@@ -93,6 +102,7 @@ class RhProvider with ChangeNotifier {
   
   // Registrar asistencia validando duplicados (Logica de tu view 'asistencia_manual')
   Future<String?> registrarAsistencia(String trabajadorId, String nombre, DateTime fecha, String tipoProyecto) async {
+    if (_mockRepo != null) return _mockRepo!.registrarAsistencia(trabajadorId, nombre, fecha, tipoProyecto);
     // Normalizar fecha (sin horas) para buscar
     DateTime inicioDia = DateTime(fecha.year, fecha.month, fecha.day);
     DateTime finDia = inicioDia.add(const Duration(days: 1));
