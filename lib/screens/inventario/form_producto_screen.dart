@@ -60,13 +60,16 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.producto == null ? "Nuevo Producto" : "Editar Producto")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                children: [
+                  TextFormField(
                 controller: _nombreCtrl,
                 decoration: const InputDecoration(labelText: "Nombre"),
                 validator: (v) => v!.isEmpty ? "Requerido" : null,
@@ -109,17 +112,19 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
                 textInputAction: TextInputAction.done,
               ),
               const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: _guardar,
-                icon: const Icon(Icons.save),
-                label: const Text("GUARDAR"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFBF2642),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.all(16),
-                ),
-              )
-            ],
+                  ElevatedButton.icon(
+                    onPressed: _guardar,
+                    icon: const Icon(Icons.save),
+                    label: const Text("GUARDAR"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFBF2642),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.all(16),
+                    ),
+                  )
+                ],
+              ),
+            ),
           ),
         ),
       ),
