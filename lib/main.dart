@@ -10,6 +10,7 @@ import 'firebase_options.dart';
 
 // Utils
 import 'utils/app_theme.dart';
+import 'utils/app_check_debug.dart';
 
 // Providers
 import 'providers/theme_provider.dart';
@@ -42,6 +43,11 @@ void main() async {
   final recaptchaKey = dotenv.env['RECAPTCHA_V3_SITE_KEY'];
   if (kIsWeb && (recaptchaKey == null || recaptchaKey.isEmpty)) {
     throw StateError('Falta RECAPTCHA_V3_SITE_KEY para App Check en Web.');
+  }
+  // En desarrollo Web se usa un token de depuración en lugar de reCAPTCHA
+  // (localhost suele no estar autorizado en la key). Nunca en release.
+  if (kDebugMode && kIsWeb) {
+    enableAppCheckDebugToken();
   }
   await FirebaseAppCheck.instance.activate(
     // ignore: deprecated_member_use
