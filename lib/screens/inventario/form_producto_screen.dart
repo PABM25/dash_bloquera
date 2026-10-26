@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/producto_modelo.dart';
 import '../../providers/inventario_provider.dart';
+import '../../utils/validators.dart';
+import '../../utils/app_theme.dart';
 
 class FormProductoScreen extends StatefulWidget {
   final Producto? producto; // Si es null, estamos creando. Si no, editando.
@@ -34,8 +36,9 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
 
     final provider = Provider.of<InventarioProvider>(context, listen: false);
     final nombre = _nombreCtrl.text.trim();
-    final stock = int.parse(_stockCtrl.text);
-    final costo = double.parse(_costoCtrl.text);
+    // Los validadores del formulario garantizan que estos valores son numéricos.
+    final stock = int.parse(_stockCtrl.text.trim());
+    final costo = double.parse(_costoCtrl.text.trim());
     final desc = _descCtrl.text.trim();
     final barcode = _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim();
 
@@ -51,7 +54,11 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
         descripcion: desc,
         barcode: barcode,
       );
-      provider.updateProducto(actualizado);
+      // Solo se envía la diferencia de stock para no pisar ventas concurrentes.
+      provider.updateProducto(
+        actualizado,
+        ajusteStock: stock - widget.producto!.stock,
+      );
     }
     Navigator.pop(context);
   }
@@ -72,7 +79,8 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
                   TextFormField(
                 controller: _nombreCtrl,
                 decoration: const InputDecoration(labelText: "Nombre"),
-                validator: (v) => v!.isEmpty ? "Requerido" : null,
+                maxLength: 200,
+                validator: Validators.requiredMax(200),
               ),
               const SizedBox(height: 10),
               Row(
@@ -82,7 +90,7 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
                       controller: _stockCtrl,
                       decoration: const InputDecoration(labelText: "Stock"),
                       keyboardType: TextInputType.number,
-                      validator: (v) => v!.isEmpty ? "Requerido" : null,
+                      validator: Validators.nonNegativeInt,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -91,7 +99,7 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
                       controller: _costoCtrl,
                       decoration: const InputDecoration(labelText: "Costo Unitario"),
                       keyboardType: TextInputType.number,
-                      validator: (v) => v!.isEmpty ? "Requerido" : null,
+                      validator: Validators.nonNegativeNumber,
                     ),
                   ),
                 ],
@@ -101,6 +109,7 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
                 controller: _descCtrl,
                 decoration: const InputDecoration(labelText: "Descripción (Opcional)"),
                 maxLines: 3,
+                maxLength: 1000,
               ),
               const SizedBox(height: 10),
               TextFormField(
@@ -109,6 +118,7 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
                   labelText: "Código de Barras",
                   prefixIcon: Icon(Icons.qr_code_scanner),
                 ),
+                maxLength: 100,
                 textInputAction: TextInputAction.done,
               ),
               const SizedBox(height: 20),
@@ -117,7 +127,7 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
                     icon: const Icon(Icons.save),
                     label: const Text("GUARDAR"),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFBF2642),
+                      backgroundColor: AppTheme.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.all(16),
                     ),

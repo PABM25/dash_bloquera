@@ -2,69 +2,144 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 1. FUNCIÓN AUXILIAR PARA VERIFICAR PERMISOS DE ESCRITURA
-    // Verifica que esté logueado Y que su rol NO sea 'demo'
-    function canWrite() {
-      return request.auth != null && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'demo';
-    }
+    // ---------------------------------------------------------------
+    // MODELO DE ACCESO (menor privilegio, denegar por defecto)
+    //   ADMIN -> lectura y escritura total
+    //   cualquier otro rol (user, DESACTIVADO, sin perfil) -> sin acceso
+    // El rol vive en users/{uid}.role y solo un ADMIN puede asignarlo.
+    // Toda colección no listada aquí queda denegada.
+    // ---------------------------------------------------------------
 
-    function isAuthenticated() {
+    function isSignedIn() {
       return request.auth != null;
     }
-    
-    // --- REGLAS POR COLECCIÓN ---
 
-    // 1. USUARIOS (El demo no puede editar su propio perfil para cambiarse el rol)
+    function userDoc() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function role() {
+      return exists(userDoc()) ? get(userDoc()).data.get('role', '') : '';
+    }
+
+    function isAdmin() {
+      return isSignedIn() && role() == 'ADMIN';
+    }
+
+    function validRole(r) {
+      return r in ['ADMIN', 'DESACTIVADO'];
+    }
+
+    function isNonEmptyString(v, maxLen) {
+      return v is string && v.size() > 0 && v.size() <= maxLen;
+    }
+
+    function isOptionalString(data, field, maxLen) {
+      return !(field in data) || data[field] == null ||
+             (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isNonNegativeNumber(v) {
+      return (v is int || v is float) && v >= 0;
+    }
+
+    // --- USUARIOS ---
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.auth.uid == userId; 
-      // Bloqueamos update para el demo
-      allow update: if canWrite() && request.auth.uid == userId;
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      // Solo un ADMIN crea perfiles y asigna roles (no hay auto-registro)
+      allow create: if isAdmin()
+                    && validRole(request.resource.data.role)
+                    && isNonEmptyString(request.resource.data.nombre, 100);
+      // Solo ADMIN modifica perfiles (nombre y rol)
+      allow update: if isAdmin()
+                    && validRole(request.resource.data.role)
+                    && isNonEmptyString(request.resource.data.nombre, 100);
+      allow delete: if false;
     }
 
-    // 2. PRODUCTOS
+    // --- PRODUCTOS ---
     match /productos/{productoId} {
-      allow read: if isAuthenticated();
-      allow write: if canWrite();
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+                            && isNonEmptyString(request.resource.data.nombre, 200)
+                            && isNonNegativeNumber(request.resource.data.stock)
+                            && isNonNegativeNumber(request.resource.data.precio_costo)
+                            && isOptionalString(request.resource.data, 'descripcion', 1000)
+                            && isOptionalString(request.resource.data, 'barcode', 100);
+      allow delete: if isAdmin();
     }
 
-    match /presupuestos/{docId} {
-      allow read: if isAuthenticated();
-      allow write: if canWrite();
-    }
-
-    // 3. MOVIMIENTOS DE INVENTARIO
+    // --- KARDEX (inmutable y atribuido al usuario real) ---
     match /movimientos_inventario/{movId} {
-      allow read: if isAuthenticated();
-      allow create: if canWrite(); 
-      allow update, delete: if false; 
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+                    && request.resource.data.usuarioId == request.auth.uid
+                    && request.resource.data.tipo in ['ENTRADA', 'SALIDA']
+                    && isNonNegativeNumber(request.resource.data.cantidad)
+                    && request.resource.data.cantidad > 0;
+      allow update, delete: if false;
     }
 
-    // 4. VENTAS
+    // --- VENTAS ---
     match /ventas/{ventaId} {
-      allow read: if isAuthenticated();
-      allow write: if canWrite(); 
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+                    && request.resource.data.createdBy == request.auth.uid
+                    && isNonEmptyString(request.resource.data.cliente, 200)
+                    && isNonNegativeNumber(request.resource.data.total)
+                    && request.resource.data.monto_pagado == 0;
+      allow update: if isAdmin()
+                    && isNonNegativeNumber(request.resource.data.monto_pagado)
+                    && request.resource.data.monto_pagado <= request.resource.data.total
+                    && request.resource.data.total == resource.data.total
+                    && request.resource.data.items == resource.data.items;
+      allow delete: if isAdmin();
     }
 
-    // 5. CLIENTES
+    // --- PRESUPUESTOS / CLIENTES / PROVEEDORES / COMPRAS ---
+    match /presupuestos/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
     match /clientes/{clienteId} {
-      allow read: if isAuthenticated();
-      allow write: if canWrite(); 
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    match /proveedores/{docId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+                            && isNonEmptyString(request.resource.data.nombre, 200);
+      allow delete: if isAdmin();
+    }
+    match /compras/{docId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isNonNegativeNumber(request.resource.data.total);
+      allow update, delete: if isAdmin();
     }
 
-    // 6. RRHH y FINANZAS
-    match /trabajadores/{docId} { 
-      allow read: if isAuthenticated();
-      allow write: if canWrite(); 
+    // --- FINANZAS ---
+    match /gastos/{docId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+                            && isNonNegativeNumber(request.resource.data.monto)
+                            && request.resource.data.fecha is timestamp;
+      allow delete: if isAdmin();
     }
-    match /asistencias/{docId} { 
-      allow read: if isAuthenticated();
-      allow write: if canWrite(); 
+
+    // --- CORRELATIVOS (folios) ---
+    match /config/{docId} {
+      allow read, write: if isAdmin();
     }
-    match /gastos/{docId} { 
-      allow read: if isAuthenticated();
-      allow write: if canWrite(); 
+
+    // --- RRHH ---
+    match /trabajadores/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /asistencias/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /registros_produccion/{docId} {
+      allow read, write: if isAdmin();
     }
   }
 }

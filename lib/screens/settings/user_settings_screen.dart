@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import '../../providers/settings_provider.dart';
+import '../../utils/app_theme.dart';
 
 class UserSettingsScreen extends StatelessWidget {
   const UserSettingsScreen({super.key});
@@ -20,7 +21,7 @@ class UserSettingsScreen extends StatelessWidget {
             accountName: Text(user?.displayName ?? "Usuario"),
             accountEmail: Text(user?.email ?? ""),
             currentAccountPicture: const CircleAvatar(child: Icon(Icons.person, size: 40)),
-            decoration: const BoxDecoration(color: Color(0xFFBF2642)),
+            decoration: const BoxDecoration(color: AppTheme.navy),
           ),
           
           ListTile(
@@ -63,7 +64,7 @@ class UserSettingsScreen extends StatelessWidget {
                     ElevatedButton(
                       onPressed: () {
                         final val = double.tryParse(ctrl.text);
-                        if (val != null) {
+                        if (val != null && val >= 0 && val <= 100) {
                           settings.setTaxRate(val / 100.0);
                           Navigator.pop(ctx);
                         }

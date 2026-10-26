@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/venta_model.dart';
 import '../repositories/ventas_repository.dart';
 
@@ -17,8 +19,26 @@ class VentasProvider with ChangeNotifier {
 
   DocumentSnapshot? _lastDoc;
 
+  StreamSubscription<User?>? _authSub;
+
   VentasProvider() {
-    fetchVentas();
+    // Carga solo con sesión activa y descarta los datos del usuario anterior al salir.
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user == null) {
+        _ventas.clear();
+        _lastDoc = null;
+        _hasMore = true;
+        notifyListeners();
+      } else {
+        fetchVentas(refresh: true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
   }
 
   Future<void> fetchVentas({bool refresh = false}) async {
@@ -84,28 +104,11 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
-  Future<void> registrarPago(
-    String ventaId,
-    double montoAbono,
-    double pagadoActual,
-    double total,
-  ) async {
-    await _repository.registrarPago(
-      ventaId,
-      montoAbono,
-      pagadoActual, 
-      total,
-    );
+  // El monto pagado y el total se leen en una transacción en el repositorio,
+  // nunca desde el estado local (evita perder abonos concurrentes).
+  Future<void> registrarPago(String ventaId, double montoAbono) async {
+    await _repository.registrarPago(ventaId, montoAbono);
     notifyListeners();
-  }
-
-  Future<void> registrarPagoSeguro(Venta venta, double monto) async {
-    await registrarPago(
-      venta.id,
-      monto,
-      venta.montoPagado,
-      venta.total,
-    );
   }
 
   Future<void> marcarEntrega(String ventaId, String nuevoEstado) async {

@@ -32,7 +32,8 @@ class HomeScreen extends StatelessWidget {
                 stream: dashboardProv.summaryStream,
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
-                    return Center(child: Text("Error: ${snapshot.error}"));
+                    debugPrint("Dashboard error: ${snapshot.error}");
+                    return const Center(child: Text("No se pudieron cargar los datos."));
                   }
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());

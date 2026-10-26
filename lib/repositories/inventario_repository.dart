@@ -54,11 +54,29 @@ class InventarioRepository {
     await batch.commit();
   }
 
-  Future<void> updateProducto(Producto producto) async {
-    await _db
-        .collection('productos')
-        .doc(producto.id)
-        .update(producto.toFirestore());
+  // Actualiza los datos del producto sin sobrescribir el stock. Si se pidió
+  // un ajuste, se aplica como diferencia atómica y queda en el kardex, de modo
+  // que las ventas hechas mientras el formulario estaba abierto no se pierden.
+  Future<void> updateProducto(Producto producto, {int ajusteStock = 0}) async {
+    final prodRef = _db.collection('productos').doc(producto.id);
+    final datos = producto.toFirestore()..remove('stock');
+
+    WriteBatch batch = _db.batch();
+    if (ajusteStock != 0) {
+      datos['stock'] = FieldValue.increment(ajusteStock);
+      batch.set(_db.collection('movimientos_inventario').doc(), {
+        'productoId': producto.id,
+        'productoNombre': producto.nombre,
+        'cantidad': ajusteStock.abs(),
+        'tipo': ajusteStock > 0 ? 'ENTRADA' : 'SALIDA',
+        'motivo': 'AJUSTE_MANUAL',
+        'fecha': FieldValue.serverTimestamp(),
+        'usuarioId': _auth.currentUser?.uid,
+        'usuarioNombre': _auth.currentUser?.displayName,
+      });
+    }
+    batch.update(prodRef, datos);
+    await batch.commit();
   }
 
   Future<void> deleteProducto(String id) async {

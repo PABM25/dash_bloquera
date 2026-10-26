@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/failure.dart';
 import '../../models/venta_model.dart';
 import '../../providers/ventas_provider.dart';
 import '../../utils/pdf_generator.dart';
@@ -98,12 +99,18 @@ class DetalleVentaScreen extends StatelessWidget {
               actions: [
                 TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
                 ElevatedButton(
-                  onPressed: () {
-                    double monto = double.tryParse(montoCtrl.text) ?? 0;
-                    if (monto > 0) {
-                      Provider.of<VentasProvider>(context, listen: false)
-                          .registrarPago(venta.id, monto, venta.montoPagado, venta.total);
-                      Navigator.pop(ctx);
+                  onPressed: () async {
+                    final monto = double.tryParse(montoCtrl.text) ?? 0;
+                    if (!monto.isFinite || monto <= 0) return;
+                    final messenger = ScaffoldMessenger.of(context);
+                    Navigator.pop(ctx);
+                    try {
+                      await Provider.of<VentasProvider>(context, listen: false)
+                          .registrarPago(venta.id, monto);
+                    } on Failure catch (f) {
+                      messenger.showSnackBar(
+                        SnackBar(content: Text(f.message), backgroundColor: Colors.red),
+                      );
                     }
                   },
                   child: const Text("Pagar"),

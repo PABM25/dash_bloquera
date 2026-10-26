@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/inventario_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../models/producto_modelo.dart';
 import 'form_producto_screen.dart';
 import 'escaner_stock_screen.dart';
@@ -22,10 +21,6 @@ class _ListaProductosScreenState extends State<ListaProductosScreen> {
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
     
-    // 1. Detectar Rol
-    final authProvider = Provider.of<AuthProvider>(context);
-    final bool esSoloLectura = authProvider.role == 'demo';
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Inventario Maestro'),
@@ -76,8 +71,7 @@ class _ListaProductosScreenState extends State<ListaProductosScreen> {
         ),
       ),
       
-      // 2. Ocultar botón si es solo lectura
-      floatingActionButton: esSoloLectura ? null : Column(
+      floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
@@ -118,8 +112,7 @@ class _ListaProductosScreenState extends State<ListaProductosScreen> {
                         style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 8),
-                      if (!esSoloLectura)
-                        TextButton.icon(
+                      TextButton.icon(
                           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FormProductoScreen())),
                           icon: const Icon(Icons.add),
                           label: const Text("Agregar el primero"),
@@ -160,13 +153,11 @@ class _ListaProductosScreenState extends State<ListaProductosScreen> {
                       ),
                       title: Text(prod.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Text("Stock: ${prod.stock} | Costo: ${currency.format(prod.precioCosto)}"),
-                      trailing: esSoloLectura 
-                        ? const Icon(Icons.lock_outline, color: Colors.grey)
-                        : IconButton(
+                      trailing: IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () => _confirmarEliminar(context, provider, prod),
                           ),
-                          onTap: esSoloLectura ? null : () {
+                          onTap: () {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => FormProductoScreen(producto: prod)));
                           },
                         ),

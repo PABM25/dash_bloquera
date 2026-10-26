@@ -19,8 +19,8 @@ class InventarioProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateProducto(Producto producto) async {
-    await _repository.updateProducto(producto);
+  Future<void> updateProducto(Producto producto, {int ajusteStock = 0}) async {
+    await _repository.updateProducto(producto, ajusteStock: ajusteStock);
     notifyListeners();
   }
 

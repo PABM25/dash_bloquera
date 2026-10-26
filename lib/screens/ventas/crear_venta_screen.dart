@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Para validar números
 import 'package:intl/intl.dart'; // Para formato de moneda y fecha
 import 'package:provider/provider.dart';
+import '../../core/failure.dart';
 import '../../models/producto_modelo.dart';
 import '../../models/venta_model.dart';
 import '../../providers/inventario_provider.dart';
@@ -235,10 +236,9 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
       if (!mounted) return;
       Navigator.pop(context); // Cerrar loading
 
-      String errorMsg = "Ocurrió un error inesperado";
-      if (e.toString().contains("STOCK_INSUFICIENTE")) {
-        errorMsg = "Stock insuficiente para uno de los productos.";
-      }
+      // Failure ya trae un mensaje apto para el usuario; el resto se oculta.
+      final String errorMsg =
+          e is Failure ? e.message : "Ocurrió un error inesperado";
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
       );

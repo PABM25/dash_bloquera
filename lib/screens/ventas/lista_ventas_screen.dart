@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/ventas_provider.dart';
 import '../../models/venta_model.dart';
 import 'crear_venta_screen.dart';
 import 'detalle_venta_screen.dart';
 import '../../utils/export_util.dart';
+import '../../utils/app_theme.dart';
 
 class ListaVentasScreen extends StatefulWidget {
   const ListaVentasScreen({super.key});
@@ -39,8 +39,6 @@ class _ListaVentasScreenState extends State<ListaVentasScreen> {
     final currency = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
-    final isDemo = Provider.of<AuthProvider>(context).isDemo;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Órdenes de Compra'),
@@ -66,11 +64,11 @@ class _ListaVentasScreenState extends State<ListaVentasScreen> {
           )
         ],
       ),
-      floatingActionButton: isDemo ? null : FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrearVentaScreen())),
         label: const Text("Nueva Venta"),
         icon: const Icon(Icons.shopping_cart),
-        backgroundColor: const Color(0xFFBF2642),
+        backgroundColor: AppTheme.primary,
       ),
       body: Consumer<VentasProvider>(
         builder: (context, provider, _) {

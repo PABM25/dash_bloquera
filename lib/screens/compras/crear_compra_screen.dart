@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/failure.dart';
 import '../../providers/compras_provider.dart';
 import '../../providers/proveedores_provider.dart';
 import '../../providers/inventario_provider.dart';
@@ -64,7 +65,7 @@ class _CrearCompraScreenState extends State<CrearCompraScreen> {
             onPressed: () {
               final cant = int.tryParse(cantCtrl.text) ?? 0;
               final costo = double.tryParse(costoCtrl.text) ?? 0.0;
-              if (cant > 0 && costo > 0) {
+              if (cant > 0 && cant <= 1000000 && costo.isFinite && costo > 0) {
                 setState(() {
                   _carrito.add(CompraItem(productoId: p.id, nombre: p.nombre, cantidad: cant, costoUnitario: costo, totalLinea: cant * costo));
                 });
@@ -85,14 +86,19 @@ class _CrearCompraScreenState extends State<CrearCompraScreen> {
     }
     setState(() => _isLoading = true);
 
-    final total = _carrito.fold(0.0, (sum, item) => sum + item.totalLinea);
-    await Provider.of<ComprasProvider>(context, listen: false).registrarCompra(
-      proveedorId: _proveedorSeleccionado!.id,
-      proveedorNombre: _proveedorSeleccionado!.nombre,
-      items: _carrito,
-      total: total,
-      fecha: DateTime.now(),
-    );
+    try {
+      await Provider.of<ComprasProvider>(context, listen: false).registrarCompra(
+        proveedorId: _proveedorSeleccionado!.id,
+        proveedorNombre: _proveedorSeleccionado!.nombre,
+        items: _carrito,
+        fecha: DateTime.now(),
+      );
+    } on Failure catch (f) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(f.message), backgroundColor: Colors.red));
+      return;
+    }
 
     if (!mounted) return;
     setState(() => _isLoading = false);

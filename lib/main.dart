@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -36,18 +37,20 @@ void main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Si la aplicación se usa en la Web, usar ReCaptchaEnterpriseProvider en lugar de ReCaptchaV3Provider, o
-  // leer la llave desde el entorno, de otro modo podría causar un crash si no hay llave.
+  // App Check: sin llave válida en Web se falla de forma visible en lugar de
+  // activar un proveedor con una llave ficticia que no protege nada.
+  final recaptchaKey = dotenv.env['RECAPTCHA_V3_SITE_KEY'];
+  if (kIsWeb && (recaptchaKey == null || recaptchaKey.isEmpty)) {
+    throw StateError('Falta RECAPTCHA_V3_SITE_KEY para App Check en Web.');
+  }
   await FirebaseAppCheck.instance.activate(
     // ignore: deprecated_member_use
     androidProvider: AndroidProvider.playIntegrity,
     // ignore: deprecated_member_use
     appleProvider: AppleProvider.deviceCheck,
-    // Asegurarse de tener 'RECAPTCHA_V3_SITE_KEY' configurado en .env para Web.
+    // En plataformas nativas este proveedor se ignora; en Web la llave ya se validó.
     // ignore: deprecated_member_use
-    webProvider: dotenv.env['RECAPTCHA_V3_SITE_KEY'] != null
-        ? ReCaptchaV3Provider(dotenv.env['RECAPTCHA_V3_SITE_KEY']!)
-        : ReCaptchaV3Provider('dummy-key'),
+    webProvider: ReCaptchaV3Provider(recaptchaKey ?? ''),
   );
 
   // CONFIGURACIÓN DE PERSISTENCIA
@@ -127,11 +130,59 @@ class AuthWrapper extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (snapshot.hasData) {
-          return const HomeScreen();
+        if (!snapshot.hasData) {
+          return const LoginScreen();
         }
-        return const LoginScreen();
+        if (!authProvider.roleLoaded) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        // Las reglas de Firestore son la barrera real; esto evita mostrar una
+        // app vacía a cuentas sin rol válido (ej. DESACTIVADO o sin perfil).
+        if (!authProvider.hasAccess) {
+          return const NoAccessScreen();
+        }
+        return const HomeScreen();
       },
+    );
+  }
+}
+
+class NoAccessScreen extends StatelessWidget {
+  const NoAccessScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.block, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              const Text(
+                "Tu cuenta no tiene acceso a esta aplicación.",
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Contacta al administrador.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () =>
+                    Provider.of<AuthProvider>(context, listen: false).logout(),
+                child: const Text("Cerrar sesión"),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

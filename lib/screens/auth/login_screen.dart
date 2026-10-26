@@ -24,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final error = await Provider.of<AuthProvider>(
       context,
       listen: false,
-    ).login(email: _emailCtrl.text.trim(), password: _passCtrl.text.trim());
+    ).login(email: _emailCtrl.text.trim(), password: _passCtrl.text);
 
     // --- CORRECCIÓN ---
     // Verificamos si el widget sigue montado.
@@ -62,27 +62,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.lock, size: 60, color: AppTheme.primary),
+                    Image.asset(
+                      'assets/images/Logo.png',
+                      height: 120,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) =>
+                          const Icon(Icons.lock, size: 60, color: AppTheme.primary),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
+                    Text(
                       "Bienvenido",
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       "Ingresa a tu cuenta para continuar",
-                      style: TextStyle(color: Colors.white70),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 32),
 

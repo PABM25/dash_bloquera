@@ -12,12 +12,14 @@ class ExportUtil {
     String fileName,
   ) async {
     try {
-      // Convertir a CSV usando la librería `csv`
-      String csvData = const csv_pkg.CsvEncoder(fieldDelimiter: ';').convert(rows);
+      // Convertir a CSV usando la librería `csv`, neutralizando fórmulas
+      final safeRows = rows.map((r) => r.map(_sanitizeCell).toList()).toList();
+      String csvData = const csv_pkg.CsvEncoder(fieldDelimiter: ';').convert(safeRows);
 
       // Usar un directorio temporal seguro y garantizado
       final directory = await getTemporaryDirectory();
-      final String path = '${directory.path}/$fileName.csv';
+      final safeName = fileName.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+      final String path = '${directory.path}/$safeName.csv';
       final File file = File(path);
 
       // Guardamos el archivo (Agregamos BOM para compatibilidad con Excel UTF-8)
@@ -37,14 +39,23 @@ class ExportUtil {
         );
       }
     } catch (e) {
+      debugPrint('Export CSV error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al exportar: $e'),
+          const SnackBar(
+            content: Text('No se pudo exportar el reporte.'),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
+  }
+
+  /// Evita inyección de fórmulas (CSV injection): un texto que empiece con
+  /// = + - @ o tabulador/retorno se ejecutaría como fórmula en Excel.
+  static dynamic _sanitizeCell(dynamic value) {
+    if (value is! String || value.isEmpty) return value;
+    const peligrosos = ['=', '+', '-', '@', '\t', '\r'];
+    return peligrosos.contains(value[0]) ? "'$value" : value;
   }
 }

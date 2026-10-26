@@ -20,8 +20,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Las nuevas contraseñas no coinciden")));
       return;
     }
-    if (_newPassCtrl.text.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("La contraseña debe tener al menos 6 caracteres")));
+    if (_newPassCtrl.text.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("La contraseña debe tener al menos 8 caracteres")));
       return;
     }
 

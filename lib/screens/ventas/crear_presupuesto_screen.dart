@@ -326,7 +326,8 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
 
     } catch (e) {
       navigator.pop(); 
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+      debugPrint("Crear presupuesto error: $e");
+      scaffoldMessenger.showSnackBar(const SnackBar(content: Text("No se pudo guardar la cotización. Intenta nuevamente."), backgroundColor: Colors.red));
     }
   }
 

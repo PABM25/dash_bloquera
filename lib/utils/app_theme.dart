@@ -2,15 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Colores extraídos de style.css
-  static const Color primary = Color(0xFFBF2642); // Rojo principal
-  static const Color primaryDark = Color(0xFFA62139); // Rojo oscuro (hover)
-  static const Color accent = Color(0xFFF2A81D); // Amarillo/Naranja acento
+  // Paleta extraída del logo V&G
+  static const Color primary = Color(0xFFD9341F); // Rojo del logo
+  static const Color primaryDark = Color(0xFFB52A18); // Rojo oscuro (hover)
+  static const Color accent = Color(0xFFF7B52C); // Amarillo sol
+  static const Color navy = Color(0xFF232B55); // Azul marino (contornos)
+  static const Color royalBlue = Color(0xFF335BA6); // Azul rey
+  static const Color turquoise = Color(0xFF2EB5C3); // Turquesa
+  static const Color pink = Color(0xFFF08FAE); // Rosa flamenco
+
+  // Superficies del tema oscuro (azul marino del logo)
+  static const Color navyBackground = Color(0xFF141933);
+  static const Color navySurface = Color(0xFF1E2547);
+  static const Color navyInput = Color(0xFF29315A);
 
   // Colores de estado (KPI cards)
-  static const Color kpiBlue = Color(0xff0dcaf0); // Cyan
+  static const Color kpiBlue = turquoise;
   static const Color kpiGreen = Color(0xFF28A745); // Verde éxito
-  static const Color kpiOrange = Color(0xFFFD7E14); // Naranja alerta
+  static const Color kpiOrange = Color(0xFFF29A1F); // Naranja alerta
 
   // Sombras sutiles reutilizables
   static List<BoxShadow> get softShadow => [
@@ -29,19 +38,20 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: primary,
         primary: primary,
-        secondary: accent,
-        surface: Colors.grey[50],
+        secondary: royalBlue,
+        tertiary: turquoise,
+        surface: const Color(0xFFF6F7FB),
       ),
-      scaffoldBackgroundColor: Colors.grey[50],
+      scaffoldBackgroundColor: const Color(0xFFF6F7FB),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        foregroundColor: navy,
         centerTitle: true,
         elevation: 0,
         scrolledUnderElevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black87),
+        iconTheme: const IconThemeData(color: navy),
         titleTextStyle: GoogleFonts.inter(
-          color: Colors.black87,
+          color: navy,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
@@ -109,12 +119,13 @@ class AppTheme {
         brightness: Brightness.dark,
         seedColor: primary,
         primary: primary,
-        secondary: accent,
-        surface: const Color(0xFF1E1E1E),
+        secondary: turquoise,
+        tertiary: accent,
+        surface: navySurface,
       ),
-      scaffoldBackgroundColor: const Color(0xFF121212),
+      scaffoldBackgroundColor: navyBackground,
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: navySurface,
         foregroundColor: Colors.white,
         centerTitle: true,
         elevation: 0,
@@ -128,7 +139,7 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: const Color(0xFF1E1E1E),
+        color: navySurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: Colors.white10),
@@ -154,7 +165,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF2C2C2C),
+        fillColor: navyInput,
         contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

@@ -7,6 +7,7 @@ import '../models/trabajador_model.dart';
 
 class RhProvider with ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static const _rolesValidos = {'ADMIN'};
 
 // --- TRABAJADORES ---
   Stream<List<Trabajador>> get trabajadoresStream {
@@ -19,8 +20,11 @@ class RhProvider with ChangeNotifier {
   Future<void> crearTrabajadorConCuenta({
     required Trabajador trabajador,
     required String password,
-    required String rol, // 'BLOQUERO', 'VENDEDOR', 'ADMIN', 'TRABAJADOR'
+    required String rol, // Debe coincidir con los roles válidos de firestore.rules
   }) async {
+    if (!_rolesValidos.contains(rol)) {
+      throw ArgumentError.value(rol, 'rol', 'Rol no permitido');
+    }
     FirebaseApp? tempApp;
     try {
       // 1. Inicializamos una app secundaria para no cerrar la sesión del admin actual
@@ -84,8 +88,14 @@ class RhProvider with ChangeNotifier {
     // (Borrar de Auth requiere Cloud Functions o re-autenticación admin)
     await _db.collection('trabajadores').doc(id).delete();
     
-    // Opcional: Desactivar en 'users' para que no pueda entrar
-    await _db.collection('users').doc(id).update({'role': 'DESACTIVADO'});
+    // Si el trabajador tiene cuenta, se le quita el acceso (las reglas niegan
+    // todo a DESACTIVADO). Para bloquear también el login, deshabilitar la
+    // cuenta en Firebase Auth.
+    final userRef = _db.collection('users').doc(id);
+    final userSnap = await userRef.get();
+    if (userSnap.exists) {
+      await userRef.update({'role': 'DESACTIVADO'});
+    }
   }
 
 
