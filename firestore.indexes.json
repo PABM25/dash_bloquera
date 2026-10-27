@@ -7,6 +7,22 @@
                 { "fieldPath": "trabajadorId", "order": "ASCENDING" },
                 { "fieldPath": "fecha", "order": "ASCENDING" }
             ]
+        },
+        {
+            "collectionGroup": "registros_produccion",
+            "queryScope": "COLLECTION",
+            "fields": [
+                { "fieldPath": "uid", "order": "ASCENDING" },
+                { "fieldPath": "fecha_local", "order": "DESCENDING" }
+            ]
+        },
+        {
+            "collectionGroup": "registros_produccion",
+            "queryScope": "COLLECTION",
+            "fields": [
+                { "fieldPath": "trabajadorId", "order": "ASCENDING" },
+                { "fieldPath": "fecha_local", "order": "ASCENDING" }
+            ]
         }
     ],
     "fieldOverrides": []

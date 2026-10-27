@@ -7,6 +7,9 @@ class Producto {
   final double precioCosto;
   final String? descripcion;
   final String? barcode;
+  // Pago al trabajador por cada unidad fabricada. null = no se fabrica aquí
+  // (ej. cemento): el bloquero no puede registrar producción de ese producto.
+  final double? tarifaProduccion;
 
   Producto({
     required this.id,
@@ -15,8 +18,11 @@ class Producto {
     required this.precioCosto,
     this.descripcion,
     this.barcode,
+    this.tarifaProduccion,
   });
-  
+
+  bool get esFabricable => (tarifaProduccion ?? 0) > 0;
+
   // Convierte un documento de Firestore a un objeto Producto
   factory Producto.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
@@ -32,6 +38,7 @@ class Producto {
       
       descripcion: data['descripcion'],
       barcode: data['barcode'],
+      tarifaProduccion: (data['tarifa_produccion'] as num?)?.toDouble(),
     );
   }
 
@@ -43,6 +50,7 @@ class Producto {
       'precio_costo': precioCosto,
       'descripcion': descripcion,
       'barcode': barcode,
+      'tarifa_produccion': tarifaProduccion,
     };
   }
 }

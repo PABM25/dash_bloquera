@@ -23,8 +23,9 @@ class InventarioRepository {
     int stock,
     double costo,
     String desc,
-    String? barcode,
-  ) async {
+    String? barcode, {
+    double? tarifaProduccion,
+  }) async {
     WriteBatch batch = _db.batch();
 
     DocumentReference prodRef = _db.collection('productos').doc();
@@ -34,6 +35,7 @@ class InventarioRepository {
       'precio_costo': costo,
       'descripcion': desc,
       'barcode': barcode,
+      'tarifa_produccion': tarifaProduccion,
       'createdAt': FieldValue.serverTimestamp(),
     });
 

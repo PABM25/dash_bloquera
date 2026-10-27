@@ -26,8 +26,50 @@ service cloud.firestore {
       return isSignedIn() && role() == 'ADMIN';
     }
 
+    // BLOQUERO: solo registra su producción (ver productos y registros_produccion).
+    function isBloquero() {
+      return isSignedIn() && role() == 'BLOQUERO';
+    }
+
+    // Ficha de RRHH vinculada a la cuenta (la asigna un ADMIN).
+    function miTrabajadorId() {
+      return get(userDoc()).data.get('trabajadorId', '');
+    }
+
     function validRole(r) {
-      return r in ['ADMIN', 'DESACTIVADO'];
+      return r in ['ADMIN', 'BLOQUERO', 'DESACTIVADO'];
+    }
+
+    // El bloquero solo puede subir el stock de un producto exactamente en la
+    // cantidad de un registro de producción suyo creado en el mismo batch.
+    function produccionValida(productoId, registroId, delta) {
+      let ruta = /databases/$(database)/documents/registros_produccion/$(registroId);
+      return !exists(ruta) && existsAfter(ruta)
+          && getAfter(ruta).data.uid == request.auth.uid
+          && getAfter(ruta).data.productoId == productoId
+          && getAfter(ruta).data.cantidad == delta;
+    }
+
+    // Registro de producción: del propio usuario, con la tarifa del producto
+    // y sumando exactamente esa cantidad al stock en el mismo batch.
+    function registroProduccionValido(registroId) {
+      let d = request.resource.data;
+      let prod = /databases/$(database)/documents/productos/$(d.productoId);
+      let tarifa = get(prod).data.get('tarifa_produccion', 0);
+      return d.uid == request.auth.uid
+          && miTrabajadorId() != ''
+          && d.trabajadorId == miTrabajadorId()
+          && d.cantidad is int && d.cantidad > 0 && d.cantidad <= 10000
+          && (tarifa is int || tarifa is float) && tarifa > 0
+          && d.tarifa == tarifa
+          && d.monto == d.cantidad * tarifa
+          && d.fecha == request.time
+          // Hora del teléfono: se tolera hasta 7 días sin señal, no fechas futuras.
+          && d.fecha_local is timestamp
+          && d.fecha_local > request.time - duration.value(7, 'd')
+          && d.fecha_local < request.time + duration.value(1, 'h')
+          && getAfter(prod).data.stock == get(prod).data.stock + d.cantidad
+          && getAfter(prod).data.get('ultima_produccion', '') == registroId;
     }
 
     function isNonEmptyString(v, maxLen) {
@@ -59,13 +101,23 @@ service cloud.firestore {
 
     // --- PRODUCTOS ---
     match /productos/{productoId} {
-      allow read: if isAdmin();
+      allow read: if isAdmin() || isBloquero();
       allow create, update: if isAdmin()
                             && isNonEmptyString(request.resource.data.nombre, 200)
                             && isNonNegativeNumber(request.resource.data.stock)
                             && isNonNegativeNumber(request.resource.data.precio_costo)
                             && isOptionalString(request.resource.data, 'descripcion', 1000)
-                            && isOptionalString(request.resource.data, 'barcode', 100);
+                            && isOptionalString(request.resource.data, 'barcode', 100)
+                            && (!('tarifa_produccion' in request.resource.data)
+                                || request.resource.data.tarifa_produccion == null
+                                || isNonNegativeNumber(request.resource.data.tarifa_produccion));
+      // Bloquero: solo sube stock, ligado a su registro de producción.
+      allow update: if isBloquero()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['stock', 'ultima_produccion'])
+                    && produccionValida(productoId,
+                                        request.resource.data.ultima_produccion,
+                                        request.resource.data.stock - resource.data.stock);
       allow delete: if isAdmin();
     }
 
@@ -76,6 +128,13 @@ service cloud.firestore {
                     && request.resource.data.usuarioId == request.auth.uid
                     && request.resource.data.tipo in ['ENTRADA', 'SALIDA']
                     && isNonNegativeNumber(request.resource.data.cantidad)
+                    && request.resource.data.cantidad > 0;
+      // Bloquero: solo la entrada de su producción.
+      allow create: if isBloquero()
+                    && request.resource.data.usuarioId == request.auth.uid
+                    && request.resource.data.tipo == 'ENTRADA'
+                    && request.resource.data.motivo == 'PRODUCCION'
+                    && request.resource.data.cantidad is int
                     && request.resource.data.cantidad > 0;
       allow update, delete: if false;
     }
@@ -146,8 +205,14 @@ service cloud.firestore {
     match /asistencias/{docId} {
       allow read, write: if isAdmin();
     }
+    // Producción para el pago por unidad. Inmutable: los errores los anula
+    // (borra) un ADMIN.
     match /registros_produccion/{docId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin()
+                  || (isBloquero() && resource.data.uid == request.auth.uid);
+      allow create: if isBloquero() && registroProduccionValido(docId);
+      allow update: if false;
+      allow delete: if isAdmin();
     }
   }
 }

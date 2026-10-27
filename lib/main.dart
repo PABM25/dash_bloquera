@@ -25,10 +25,12 @@ import 'providers/presupuestos_provider.dart'; // Ya lo tenías importado
 import 'providers/proveedores_provider.dart';
 import 'providers/compras_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/produccion_provider.dart';
 
 // Screens
 import 'screens/auth/login_screen.dart';
 import 'screens/dashboard/home_screen.dart';
+import 'screens/bloquero/bloquero_home_screen.dart';
 
 // Widgets
 import 'widgets/offline_banner.dart';
@@ -98,6 +100,7 @@ class MyApp extends StatelessWidget {
         // [CORRECCIÓN] Agregamos el proveedor de presupuestos aquí:
         ChangeNotifierProvider(create: (_) => PresupuestosProvider()), 
         ChangeNotifierProvider(create: (_) => ProveedoresProvider()),
+        ChangeNotifierProvider(create: (_) => ProduccionProvider()),
 
         // Se crean una sola vez: antes se recreaban (y reabrían sus consultas)
         // cada vez que Inventario o Ventas notificaban un cambio.
@@ -161,6 +164,8 @@ class AuthWrapper extends StatelessWidget {
         if (!authProvider.hasAccess) {
           return const NoAccessScreen();
         }
+        // El bloquero solo ve el registro de producción.
+        if (authProvider.isBloquero) return const BloqueroHomeScreen();
         return const HomeScreen();
       },
     );

@@ -38,7 +38,11 @@ class ListaTrabajadoresScreen extends StatelessWidget {
                       child: Icon(Icons.person, color: t.tipoProyecto == 'CONSTRUCTORA' ? Colors.orange : Colors.blue),
                     ),
                     title: Text(t.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text("${t.cargo ?? 'Sin cargo'} | ${Formatters.formatCurrency(t.salarioPorDia)}/día"),
+                    subtitle: Text(
+                      "${t.cargo ?? 'Sin cargo'} | "
+                      "${t.pagaPorProduccion ? 'Pago por producción' : '${Formatters.formatCurrency(t.salarioPorDia)}/día'}"
+                      "${t.tieneAcceso ? ' | Con acceso a la app' : ''}",
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -72,7 +76,7 @@ class ListaTrabajadoresScreen extends StatelessWidget {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
           TextButton(onPressed: () {
-            guardarEnSegundoPlano(messenger, provider.deleteTrabajador(t.id),
+            guardarEnSegundoPlano(messenger, provider.deleteTrabajador(t),
                 mensajeError: "No se pudo eliminar a ${t.nombre}.");
             Navigator.pop(ctx);
           }, child: const Text("Eliminar", style: TextStyle(color: Colors.red))),

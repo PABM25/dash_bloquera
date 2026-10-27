@@ -16,6 +16,7 @@ class AuthProvider with ChangeNotifier {
         // No dejar en memoria datos de la sesión anterior.
         SharedStream.resetAll();
         _role = null;
+        _trabajadorId = null;
         _roleLoaded = true;
         notifyListeners();
       } else {
@@ -38,7 +39,14 @@ class AuthProvider with ChangeNotifier {
   bool _roleLoaded = false;
   bool get roleLoaded => _roleLoaded;
   bool get isAdmin => _role == 'ADMIN';
-  bool get hasAccess => isAdmin;
+  bool get isBloquero => _role == 'BLOQUERO';
+  bool get hasAccess => isAdmin || isBloquero;
+
+  // Ficha de RRHH vinculada a la cuenta (solo cuentas BLOQUERO).
+  String? _trabajadorId;
+  String? get trabajadorId => _trabajadorId;
+  String _nombre = '';
+  String get nombre => _nombre;
 
   // Cargar rol del usuario actual
   Future<void> fetchUserRole() async {
@@ -47,13 +55,20 @@ class AuthProvider with ChangeNotifier {
     _roleLoaded = false;
     try {
       final doc = await _db.collection('users').doc(user.uid).get();
-      final value = doc.data()?['role'];
+      final data = doc.data();
+      final value = data?['role'];
       _role = value is String ? value : null;
+      final trabajadorId = data?['trabajadorId'];
+      _trabajadorId = trabajadorId is String && trabajadorId.isNotEmpty ? trabajadorId : null;
+      _nombre = (data?['nombre'] as String?) ?? user.displayName ?? '';
+      // Un bloquero sin ficha vinculada no podría registrar nada.
+      if (isBloquero && _trabajadorId == null) _role = null;
     } catch (e) {
       // Sin perfil, sin permisos u otro error: se trata como usuario sin
       // acceso (nunca dejar la carga colgada).
       debugPrint("Error fetching role: $e");
       _role = null;
+      _trabajadorId = null;
     }
     _roleLoaded = true;
     notifyListeners();

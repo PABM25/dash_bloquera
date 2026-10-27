@@ -22,6 +22,7 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
   late TextEditingController _costoCtrl;
   late TextEditingController _descCtrl;
   late TextEditingController _barcodeCtrl;
+  late TextEditingController _tarifaCtrl;
 
   @override
   void initState() {
@@ -32,6 +33,8 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
     _costoCtrl = TextEditingController(text: costo == null ? '' : Formatters.montoParaEditar(costo));
     _descCtrl = TextEditingController(text: widget.producto?.descripcion ?? '');
     _barcodeCtrl = TextEditingController(text: widget.producto?.barcode ?? '');
+    final tarifa = widget.producto?.tarifaProduccion;
+    _tarifaCtrl = TextEditingController(text: tarifa == null ? '' : Formatters.montoParaEditar(tarifa));
   }
 
   void _guardar() {
@@ -45,11 +48,15 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
     final costo = Formatters.parseMonto(_costoCtrl.text)!;
     final desc = _descCtrl.text.trim();
     final barcode = _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim();
+    // Vacío o 0 = no se fabrica (el bloquero no puede registrarlo).
+    final tarifa = Formatters.parseMonto(_tarifaCtrl.text);
+    final tarifaProduccion = (tarifa ?? 0) > 0 ? tarifa : null;
 
     if (widget.producto == null) {
       guardarEnSegundoPlano(
         messenger,
-        provider.addProducto(nombre, stock, costo, desc, barcode),
+        provider.addProducto(nombre, stock, costo, desc, barcode,
+            tarifaProduccion: tarifaProduccion),
         mensajeError: "No se pudo crear el producto '$nombre'.",
       );
     } else {
@@ -61,6 +68,7 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
         precioCosto: costo,
         descripcion: desc,
         barcode: barcode,
+        tarifaProduccion: tarifaProduccion,
       );
       // Solo se envía la diferencia de stock para no pisar ventas concurrentes.
       // Si con las ventas recientes el stock quedaría negativo, las reglas lo
@@ -134,6 +142,18 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
                 ),
                 maxLength: 100,
                 textInputAction: TextInputAction.done,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _tarifaCtrl,
+                decoration: const InputDecoration(
+                  labelText: "Pago al bloquero por unidad (opcional)",
+                  helperText: "Solo para productos que se fabrican. Vacío = no se registra como producción.",
+                  helperMaxLines: 2,
+                  prefixText: "\$ ",
+                ),
+                keyboardType: TextInputType.number,
+                validator: (v) => (v == null || v.trim().isEmpty) ? null : Validators.nonNegativeNumber(v),
               ),
               const SizedBox(height: 20),
                   ElevatedButton.icon(

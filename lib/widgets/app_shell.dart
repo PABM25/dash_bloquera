@@ -94,7 +94,8 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final active = auth.currentUser != null && auth.roleLoaded && auth.hasAccess;
+    // El menú completo es solo para ADMIN; el bloquero tiene su propia pantalla.
+    final active = auth.currentUser != null && auth.roleLoaded && auth.isAdmin;
 
     if (_wasActive && !active) _onSessionEnded();
     _wasActive = active;

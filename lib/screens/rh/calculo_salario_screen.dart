@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../../providers/rh_provider.dart';
 import '../../providers/finanzas_provider.dart';
 import '../../models/trabajador_model.dart';
+import '../../models/registro_produccion_model.dart';
+import '../../providers/produccion_provider.dart';
+import '../../utils/background_write.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/app_shell.dart';
 
@@ -30,12 +33,22 @@ class _CalculoSalarioScreenState extends State<CalculoSalarioScreen> {
 
     final provider = Provider.of<RhProvider>(context, listen: false);
     try {
-      final res = await provider.calcularSalario(
-        _trabajadorIdSeleccionado!,
-        _trabajadorObjeto!.salarioPorDia,
-        _inicio,
-        _fin
-      );
+      final Map<String, dynamic> res;
+      if (_trabajadorObjeto!.pagaPorProduccion) {
+        final registros = await provider.registrosProduccion(_trabajadorIdSeleccionado!, _inicio, _fin);
+        res = {
+          'registros': registros,
+          'unidades': registros.fold<int>(0, (acc, r) => acc + r.cantidad),
+          'total': registros.fold<double>(0, (acc, r) => acc + r.monto),
+        };
+      } else {
+        res = await provider.calcularSalario(
+          _trabajadorIdSeleccionado!,
+          _trabajadorObjeto!.salarioPorDia,
+          _inicio,
+          _fin
+        );
+      }
       if (!mounted) return;
       setState(() => _resultado = res);
     } catch (e) {
@@ -142,7 +155,10 @@ class _CalculoSalarioScreenState extends State<CalculoSalarioScreen> {
             // Resultados
             if (_resultado != null) ...[
               const Divider(height: 40),
-              Text("Días Trabajados: ${_resultado!['dias']}", style: const TextStyle(fontSize: 18)),
+              if (_resultado!['registros'] != null)
+                ..._detalleProduccion(_resultado!['registros'] as List<RegistroProduccion>)
+              else
+                Text("Días Trabajados: ${_resultado!['dias']}", style: const TextStyle(fontSize: 18)),
               Text("Total a Pagar: ${Formatters.formatCurrency(_resultado!['total'])}", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
               const SizedBox(height: 20),
               ElevatedButton.icon(
@@ -154,6 +170,71 @@ class _CalculoSalarioScreenState extends State<CalculoSalarioScreen> {
             ]
           ],
         ),
+      ),
+    );
+  }
+
+  /// Resumen por producto y lista de registros (con opción de anular).
+  List<Widget> _detalleProduccion(List<RegistroProduccion> registros) {
+    final porProducto = <String, (int, double)>{};
+    for (final r in registros) {
+      final (int u, double m) = porProducto[r.productoNombre] ?? (0, 0.0);
+      porProducto[r.productoNombre] = (u + r.cantidad, m + r.monto);
+    }
+    return [
+      Text("Unidades fabricadas: ${_resultado!['unidades']}", style: const TextStyle(fontSize: 18)),
+      for (final e in porProducto.entries)
+        Text("${e.key}: ${e.value.$1} u. = ${Formatters.formatCurrency(e.value.$2)}"),
+      if (registros.isNotEmpty)
+        ExpansionTile(
+          title: Text("Ver ${registros.length} registros"),
+          children: [
+            for (final r in registros)
+              ListTile(
+                dense: true,
+                title: Text("${r.cantidad} × ${r.productoNombre}"),
+                subtitle: Text(Formatters.formatDate(r.fecha)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(Formatters.formatCurrency(r.monto)),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      tooltip: "Anular registro",
+                      onPressed: () => _confirmarAnular(r),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+    ];
+  }
+
+  void _confirmarAnular(RegistroProduccion r) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Anular registro"),
+        content: Text(
+          "Se borrará el registro de ${r.cantidad} × ${r.productoNombre} y se descontarán "
+          "esas ${r.cantidad} unidades del stock. ¿Continuar?",
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              guardarEnSegundoPlano(
+                ScaffoldMessenger.of(context),
+                context.read<ProduccionProvider>().anularRegistro(r),
+                mensajeError: "No se pudo anular el registro (¿el stock quedaría negativo?).",
+              );
+              _calcular();
+            },
+            child: const Text("Anular", style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }

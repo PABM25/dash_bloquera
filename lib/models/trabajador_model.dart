@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Trabajador {
+  static const String pagoPorDia = 'DIA';
+  static const String pagoPorProduccion = 'PRODUCCION';
+
   final String id;
   final String nombre;
   final String rut;
@@ -9,6 +12,10 @@ class Trabajador {
   final String? cargo;
   final String tipoProyecto; // CONSTRUCTORA o BLOQUERA
   final double salarioPorDia;
+  final String tipoPago; // DIA (asistencias) o PRODUCCION (unidades fabricadas)
+  // Cuenta de la app vinculada (users/{uid}), si se le creó acceso.
+  final String? uid;
+  final bool accesoActivo;
 
   Trabajador({
     required this.id,
@@ -19,7 +26,13 @@ class Trabajador {
     this.cargo,
     required this.tipoProyecto,
     required this.salarioPorDia,
+    this.tipoPago = pagoPorDia,
+    this.uid,
+    this.accesoActivo = false,
   });
+
+  bool get pagaPorProduccion => tipoPago == pagoPorProduccion;
+  bool get tieneAcceso => uid != null && accesoActivo;
 
   factory Trabajador.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
@@ -32,9 +45,14 @@ class Trabajador {
       cargo: data['cargo'],
       tipoProyecto: data['tipo_proyecto'] ?? 'CONSTRUCTORA',
       salarioPorDia: (data['salario_por_dia'] ?? 0).toDouble(),
+      tipoPago: data['tipo_pago'] == pagoPorProduccion ? pagoPorProduccion : pagoPorDia,
+      uid: data['uid'],
+      accesoActivo: data['acceso_activo'] == true,
     );
   }
 
+  // uid y acceso_activo no van aquí: solo los cambia RhProvider al crear o
+  // quitar el acceso, así editar la ficha no los pisa.
   Map<String, dynamic> toFirestore() {
     return {
       'nombre': nombre,
@@ -44,6 +62,7 @@ class Trabajador {
       'cargo': cargo,
       'tipo_proyecto': tipoProyecto,
       'salario_por_dia': salarioPorDia,
+      'tipo_pago': tipoPago,
     };
   }
 }

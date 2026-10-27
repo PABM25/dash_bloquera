@@ -17,9 +17,11 @@ class InventarioProvider with ChangeNotifier {
     int stock,
     double costo,
     String desc,
-    String? barcode,
-  ) async {
-    await _repository.agregarProducto(nombre, stock, costo, desc, barcode);
+    String? barcode, {
+    double? tarifaProduccion,
+  }) async {
+    await _repository.agregarProducto(nombre, stock, costo, desc, barcode,
+        tarifaProduccion: tarifaProduccion);
     notifyListeners();
   }
 
