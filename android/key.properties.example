@@ -1,0 +1,6 @@
+# Copia este archivo como android/key.properties (NO se sube a git) y completa.
+# storeFile es relativo a android/app/.
+storePassword=CAMBIAR
+keyPassword=CAMBIAR
+keyAlias=upload
+storeFile=../upload-keystore.jks

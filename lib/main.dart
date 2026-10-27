@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'firebase_options.dart';
 
 // Utils
@@ -38,6 +39,17 @@ void main() async {
   await dotenv.load(fileName: ".env");
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Crashlytics solo existe en móvil/macOS; en Web y Windows se omite.
+  if (_crashlyticsDisponible) {
+    // En debug no se envían reportes para no mezclar errores de desarrollo.
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  }
 
   // App Check: sin llave válida en Web se falla de forma visible en lugar de
   // activar un proveedor con una llave ficticia que no protege nada.
@@ -192,3 +204,9 @@ class NoAccessScreen extends StatelessWidget {
     );
   }
 }
+
+bool get _crashlyticsDisponible =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS);

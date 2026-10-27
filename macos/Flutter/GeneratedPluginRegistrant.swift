@@ -10,6 +10,7 @@ import connectivity_plus
 import firebase_app_check
 import firebase_auth
 import firebase_core
+import firebase_crashlytics
 import mobile_scanner
 import printing
 import share_plus
@@ -21,6 +22,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FirebaseAppCheckPlugin.register(with: registry.registrar(forPlugin: "FirebaseAppCheckPlugin"))
   FLTFirebaseAuthPlugin.register(with: registry.registrar(forPlugin: "FLTFirebaseAuthPlugin"))
   FLTFirebaseCorePlugin.register(with: registry.registrar(forPlugin: "FLTFirebaseCorePlugin"))
+  FirebaseCrashlyticsPlugin.register(with: registry.registrar(forPlugin: "FirebaseCrashlyticsPlugin"))
   MobileScannerPlugin.register(with: registry.registrar(forPlugin: "MobileScannerPlugin"))
   PrintingPlugin.register(with: registry.registrar(forPlugin: "PrintingPlugin"))
   SharePlusMacosPlugin.register(with: registry.registrar(forPlugin: "SharePlusMacosPlugin"))

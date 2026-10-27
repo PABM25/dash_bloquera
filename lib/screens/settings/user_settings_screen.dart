@@ -5,6 +5,7 @@ import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import '../../providers/settings_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/background_write.dart';
 import '../../widgets/app_shell.dart';
 
 class UserSettingsScreen extends StatelessWidget {
@@ -72,7 +73,9 @@ class UserSettingsScreen extends StatelessWidget {
             leading: const Icon(Icons.percent, color: Colors.green),
             title: const Text("Configuración de Impuestos"),
             subtitle: Consumer<SettingsProvider>(
-              builder: (context, settings, _) => Text("Tasa actual: ${(settings.taxRate * 100).toInt()}%"),
+              builder: (context, settings, _) => Text(
+                "Tasa actual: ${(settings.taxRate * 100).toStringAsFixed(settings.taxRate * 100 % 1 == 0 ? 0 : 1)}% (todos los dispositivos)",
+              ),
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
@@ -91,9 +94,13 @@ class UserSettingsScreen extends StatelessWidget {
                     TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
                     ElevatedButton(
                       onPressed: () {
-                        final val = double.tryParse(ctrl.text);
+                        final val = double.tryParse(ctrl.text.trim().replaceAll(',', '.'));
                         if (val != null && val >= 0 && val <= 100) {
-                          settings.setTaxRate(val / 100.0);
+                          guardarEnSegundoPlano(
+                            ScaffoldMessenger.of(context),
+                            settings.setTaxRate(val / 100.0),
+                            mensajeError: 'No se pudo guardar la tasa de IVA.',
+                          );
                           Navigator.pop(ctx);
                         }
                       },

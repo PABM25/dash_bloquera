@@ -128,7 +128,15 @@ service cloud.firestore {
 
     // --- CORRELATIVOS (folios) ---
     match /config/{docId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if isAdmin() && docId != 'ajustes';
+    }
+
+    // --- AJUSTES COMPARTIDOS (tasa de IVA de todos los dispositivos) ---
+    match /config/ajustes {
+      allow write: if isAdmin()
+                   && isNonNegativeNumber(request.resource.data.tasa_iva)
+                   && request.resource.data.tasa_iva <= 1;
     }
 
     // --- RRHH ---
