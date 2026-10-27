@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
+import '../../utils/formatters.dart';
 import '../../providers/inventario_provider.dart';
 import '../../models/producto_modelo.dart';
 import 'form_producto_screen.dart';
@@ -22,7 +22,7 @@ class _ListaProductosScreenState extends State<ListaProductosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currency = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
+    final currency = Formatters.clp;
     
     return Scaffold(
       appBar: AppBar(

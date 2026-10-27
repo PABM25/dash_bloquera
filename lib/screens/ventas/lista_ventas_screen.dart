@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../utils/formatters.dart';
 import '../../providers/ventas_provider.dart';
 import '../../models/venta_model.dart';
 import 'crear_venta_screen.dart';
@@ -40,7 +41,7 @@ class _ListaVentasScreenState extends State<ListaVentasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currency = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
+    final currency = Formatters.clp;
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
     return Scaffold(

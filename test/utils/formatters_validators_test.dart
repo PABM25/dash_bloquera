@@ -30,6 +30,20 @@ void main() {
     });
   });
 
+  group('Formatters.formatCurrency', () {
+    test('pesos chilenos con el símbolo adelante', () {
+      expect(Formatters.formatCurrency(0), '\$0');
+      expect(Formatters.formatCurrency(1500), '\$1.500');
+      expect(Formatters.formatCurrency(1234567), '\$1.234.567');
+      expect(Formatters.formatCurrency(-2500), '-\$2.500');
+    });
+
+    test('compacto para tarjetas', () {
+      expect(Formatters.formatCurrencyCompact(0), '\$0');
+      expect(Formatters.formatCurrencyCompact(-500), '-\$500');
+    });
+  });
+
   group('Validators', () {
     test('positiveNumber acepta miles con punto', () {
       expect(Validators.positiveNumber('15.000'), isNull);

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart'; // [IMPORTANTE] Para formatear moneda
+import '../../utils/formatters.dart'; // [IMPORTANTE] Para formatear moneda
 import '../../providers/dashboard_provider.dart';
 import '../../models/dashboard_summary.dart';
 import '../../widgets/kpi_card.dart';
@@ -46,9 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     // [IMPORTANTE] Definimos el formateador aquí
-    final currencyFormat = NumberFormat.compactCurrency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
     // Si prefieres ver los números completos (ej: $ 1.500.000) usa este otro:
-    // final currencyFormat = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
 
     return Scaffold(
           appBar: AppBar(
@@ -125,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             KpiCard(
                               title: "Ingresos (neto)",
                               // [CORRECCIÓN] Convertimos el número a String formateado
-                              value: currencyFormat.format(data.ingresos), 
+                              value: Formatters.formatCurrencyCompact(data.ingresos), 
                               subtitle: "Ir a Ventas",
                               icon: Icons.attach_money,
                               color: AppTheme.primary,
@@ -140,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             KpiCard(
                               title: "Utilidad Neta",
                               // [CORRECCIÓN]
-                              value: currencyFormat.format(data.utilidad),
+                              value: Formatters.formatCurrencyCompact(data.utilidad),
                               subtitle: "Ganancia Real",
                               icon: Icons.savings,
                               color: data.utilidad >= 0 ? AppTheme.kpiGreen : AppTheme.brandRed,
@@ -151,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             KpiCard(
                               title: "Por Cobrar",
                               // [CORRECCIÓN]
-                              value: currencyFormat.format(data.porCobrar),
+                              value: Formatters.formatCurrencyCompact(data.porCobrar),
                               subtitle: "Saldo Pendiente",
                               icon: Icons.money_off,
                               color: AppTheme.kpiOrange,
@@ -162,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             KpiCard(
                               title: "Gastos Totales",
                               // [CORRECCIÓN]
-                              value: currencyFormat.format(data.gastos),
+                              value: Formatters.formatCurrencyCompact(data.gastos),
                               subtitle: "Ver detalle de gastos",
                               icon: Icons.shopping_bag,
                               color: AppTheme.kpiBlue,

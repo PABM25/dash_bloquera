@@ -1,13 +1,21 @@
 import 'package:intl/intl.dart';
 
 class Formatters {
-  // Formato Moneda Chilena: $ 1.500
-  static String formatCurrency(double amount) {
-    return NumberFormat.currency(
-      locale: 'es_CL', 
-      symbol: '\$', 
-      decimalDigits: 0
-    ).format(amount);
+  // Formato Moneda Chilena: $1.500. El locale es_CL por sí solo pone el
+  // símbolo al final ("1.500 $"); el patrón lo deja adelante.
+  static final NumberFormat clp = NumberFormat.currency(
+    locale: 'es_CL',
+    symbol: '\$',
+    decimalDigits: 0,
+    customPattern: '¤#,##0',
+  );
+
+  static String formatCurrency(double amount) => clp.format(amount);
+
+  // Formato compacto para tarjetas: $1,5 M
+  static String formatCurrencyCompact(double amount) {
+    final texto = NumberFormat.compact(locale: 'es_CL').format(amount.abs());
+    return amount < 0 ? '-\$$texto' : '\$$texto';
   }
 
   // Formato Fecha Corta: 25/10/2025

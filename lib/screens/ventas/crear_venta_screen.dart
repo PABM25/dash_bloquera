@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Para validar números
-import 'package:intl/intl.dart'; // Para formato de moneda y fecha
+import 'package:intl/intl.dart';
+import '../../utils/formatters.dart'; // Para formato de moneda y fecha
 import 'package:provider/provider.dart';
 import '../../core/failure.dart';
 import '../../models/producto_modelo.dart';
@@ -30,7 +31,7 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
   List<ItemOrden> carrito = [];
 
   // Formateadores (CLP y Fecha)
-  final currencyFormat = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
+  final currencyFormat = Formatters.clp;
   final dateFormat = DateFormat('dd/MM/yyyy');
 
   // Precios netos + IVA: misma fórmula que usa el repositorio al guardar.

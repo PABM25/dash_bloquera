@@ -4,24 +4,78 @@
             "collectionGroup": "asistencias",
             "queryScope": "COLLECTION",
             "fields": [
-                { "fieldPath": "trabajadorId", "order": "ASCENDING" },
-                { "fieldPath": "fecha", "order": "ASCENDING" }
+                {
+                    "fieldPath": "trabajadorId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fecha",
+                    "order": "ASCENDING"
+                }
             ]
         },
         {
             "collectionGroup": "registros_produccion",
             "queryScope": "COLLECTION",
             "fields": [
-                { "fieldPath": "uid", "order": "ASCENDING" },
-                { "fieldPath": "fecha_local", "order": "DESCENDING" }
+                {
+                    "fieldPath": "uid",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fecha_local",
+                    "order": "DESCENDING"
+                }
             ]
         },
         {
             "collectionGroup": "registros_produccion",
             "queryScope": "COLLECTION",
             "fields": [
-                { "fieldPath": "trabajadorId", "order": "ASCENDING" },
-                { "fieldPath": "fecha_local", "order": "ASCENDING" }
+                {
+                    "fieldPath": "trabajadorId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fecha_local",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "ventas",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "iva",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "monto_pagado",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "total",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "total_costo",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "gastos",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "referenciaId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "monto",
+                    "order": "ASCENDING"
+                }
             ]
         }
     ],

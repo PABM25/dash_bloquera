@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import '../../utils/formatters.dart';
 import 'package:provider/provider.dart';
 import '../../models/producto_modelo.dart';
 import '../../models/venta_model.dart'; 
@@ -29,7 +30,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
   DateTime _fechaEmision = DateTime.now();
   List<ItemOrden> carrito = [];
   
-  final currencyFormat = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
+  final currencyFormat = Formatters.clp;
   final dateFormat = DateFormat('dd/MM/yyyy');
 
   // Precios netos + IVA: misma fórmula que usa el provider al guardar.

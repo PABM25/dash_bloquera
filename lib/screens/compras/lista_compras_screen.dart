@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../utils/formatters.dart';
 import '../../providers/compras_provider.dart';
 import '../../models/compra_model.dart';
 import 'crear_compra_screen.dart';
@@ -33,7 +34,7 @@ class _ListaComprasScreenState extends State<ListaComprasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currency = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
+    final currency = Formatters.clp;
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
     return Scaffold(
