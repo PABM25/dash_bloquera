@@ -1,4 +1,13 @@
 {
-    "indexes": [],
+    "indexes": [
+        {
+            "collectionGroup": "asistencias",
+            "queryScope": "COLLECTION",
+            "fields": [
+                { "fieldPath": "trabajadorId", "order": "ASCENDING" },
+                { "fieldPath": "fecha", "order": "ASCENDING" }
+            ]
+        }
+    ],
     "fieldOverrides": []
 }

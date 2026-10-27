@@ -1,3 +1,5 @@
+import 'formatters.dart';
+
 class Validators {
   // Campo Requerido
   static String? required(String? value) {
@@ -19,8 +21,8 @@ class Validators {
 
   // Validar Números Positivos
   static String? positiveNumber(String? value) {
-    if (value == null || value.isEmpty) return 'Requerido';
-    final numValue = double.tryParse(value);
+    if (value == null || value.trim().isEmpty) return 'Requerido';
+    final numValue = Formatters.parseMonto(value);
     if (numValue == null) return 'Debe ser un número';
     if (numValue <= 0) return 'Debe ser mayor a 0';
     return null;
@@ -39,8 +41,8 @@ class Validators {
   // Validar números >= 0 (costos, precios)
   static String? nonNegativeNumber(String? value) {
     if (value == null || value.trim().isEmpty) return 'Requerido';
-    final numValue = double.tryParse(value.trim());
-    if (numValue == null || !numValue.isFinite) return 'Debe ser un número';
+    final numValue = Formatters.parseMonto(value);
+    if (numValue == null) return 'Debe ser un número';
     if (numValue < 0) return 'No puede ser negativo';
     return null;
   }

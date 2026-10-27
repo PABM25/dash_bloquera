@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../providers/finanzas_provider.dart';
 import '../../models/gasto_model.dart';
 import '../../utils/validators.dart';
+import '../../utils/background_write.dart';
+import '../../utils/formatters.dart';
 
 class FormGastoScreen extends StatefulWidget {
   const FormGastoScreen({super.key});
@@ -26,12 +28,17 @@ class _FormGastoScreenState extends State<FormGastoScreen> {
       id: '',
       fecha: _fecha,
       categoria: _categoria,
-      descripcion: _descCtrl.text,
-      monto: double.parse(_montoCtrl.text),
+      descripcion: _descCtrl.text.trim(),
+      // El validador garantiza que el monto es un número válido.
+      monto: Formatters.parseMonto(_montoCtrl.text)!,
       tipoProyecto: _tipoProyecto,
     );
 
-    Provider.of<FinanzasProvider>(context, listen: false).addGasto(g);
+    guardarEnSegundoPlano(
+      ScaffoldMessenger.of(context),
+      Provider.of<FinanzasProvider>(context, listen: false).addGasto(g),
+      mensajeError: "No se pudo registrar el gasto.",
+    );
     Navigator.pop(context);
   }
 

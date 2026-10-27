@@ -4,9 +4,32 @@ import 'package:intl/intl.dart';
 import '../../providers/compras_provider.dart';
 import '../../models/compra_model.dart';
 import 'crear_compra_screen.dart';
+import '../../widgets/app_shell.dart';
 
-class ListaComprasScreen extends StatelessWidget {
+class ListaComprasScreen extends StatefulWidget {
   const ListaComprasScreen({super.key});
+
+  @override
+  State<ListaComprasScreen> createState() => _ListaComprasScreenState();
+}
+
+class _ListaComprasScreenState extends State<ListaComprasScreen> {
+  int _limit = ComprasProvider.pageSize;
+  // La consulta se crea una vez (y al pedir más), no en cada build().
+  late Stream<List<Compra>> _stream;
+
+  @override
+  void initState() {
+    super.initState();
+    _stream = context.read<ComprasProvider>().comprasStream(limit: _limit);
+  }
+
+  void _cargarMas() {
+    setState(() {
+      _limit += ComprasProvider.pageSize;
+      _stream = context.read<ComprasProvider>().comprasStream(limit: _limit);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,30 +37,37 @@ class ListaComprasScreen extends StatelessWidget {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Historial de Compras')),
+      appBar: AppBar(leading: ShellScope.menuButton(context), title: const Text('Historial de Compras')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrearCompraScreen())),
         label: const Text("Nueva Compra"),
         icon: const Icon(Icons.add_shopping_cart),
       ),
-      body: Consumer<ComprasProvider>(
-        builder: (context, provider, _) {
-          return StreamBuilder<List<Compra>>(
-            stream: provider.comprasStream,
+      body: StreamBuilder<List<Compra>>(
+            stream: _stream,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+              if (snapshot.data!.isEmpty) {
                 return const Center(child: Text("No hay compras registradas."));
               }
 
               final compras = snapshot.data!;
+              final hayMas = compras.length >= _limit;
               return Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1000),
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: compras.length,
+                    itemCount: compras.length + (hayMas ? 1 : 0),
                     itemBuilder: (context, index) {
+                      if (index == compras.length) {
+                        return Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Center(
+                            child: OutlinedButton(onPressed: _cargarMas, child: const Text("Cargar más")),
+                          ),
+                        );
+                      }
                       final c = compras[index];
                       return Card(
                         child: ExpansionTile(
@@ -58,8 +88,6 @@ class ListaComprasScreen extends StatelessWidget {
                 ),
               );
             },
-          );
-        },
       ),
     );
   }

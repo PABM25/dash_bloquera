@@ -37,94 +37,107 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error), backgroundColor: Colors.red),
+        SnackBar(content: Text(error), backgroundColor: AppTheme.brandRed),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Card(
-              elevation: 4,
-              shadowColor: Colors.black12,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      'assets/images/Logo.png',
-                      height: 120,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) =>
-                          const Icon(Icons.lock, size: 60, color: AppTheme.primary),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      "Bienvenido",
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
+      body: CustomPaint(
+        painter: _DotGridPainter(
+          color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.07),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLargeCard),
+                  border: Border.all(color: Theme.of(context).dividerColor),
+                  boxShadow: isDark ? null : AppTheme.ringShadow,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Image.asset(
+                        'assets/images/logo_app.png',
+                        height: 96,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) =>
+                            const Icon(Icons.lock, size: 60, color: AppTheme.primary),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Ingresa a tu cuenta para continuar",
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    TextField(
-                      controller: _emailCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Correo Electrónico',
-                        hintText: 'ejemplo@empresa.com',
-                        prefixIcon: Icon(Icons.email_outlined),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _passCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Contraseña',
-                        hintText: 'Tu contraseña',
-                        prefixIcon: Icon(Icons.lock_outline),
-                      ),
-                      obscureText: true,
-                      onSubmitted: (_) => _submit(),
-                    ),
-                    const SizedBox(height: 32),
-
-                    if (_isLoading)
-                      const CircularProgressIndicator()
-                    else
-                      ElevatedButton(
-                        onPressed: _submit,
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 54),
-                          backgroundColor: AppTheme.primary,
-                        ),
-                        child: const Text(
-                          "INGRESAR",
-                          style: TextStyle(color: Colors.white, fontSize: 16, letterSpacing: 1),
+                      const SizedBox(height: 24),
+                      Text(
+                        "Bienvenido",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: -0.6,
+                          height: 1.1,
+                          color: scheme.onSurface,
                         ),
                       ),
-                  ],
+                      const SizedBox(height: 6),
+                      Text(
+                        "Ingresa a tu cuenta para continuar",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      TextField(
+                        controller: _emailCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Correo Electrónico',
+                          hintText: 'ejemplo@empresa.com',
+                          prefixIcon: Icon(Icons.email_outlined, size: 20),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _passCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Contraseña',
+                          hintText: 'Tu contraseña',
+                          prefixIcon: Icon(Icons.lock_outline, size: 20),
+                        ),
+                        obscureText: true,
+                        onSubmitted: (_) => _submit(),
+                      ),
+                      const SizedBox(height: 24),
+
+                      SizedBox(
+                        height: 46,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _submit,
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text("Ingresar"),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -133,4 +146,25 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+}
+
+/// Fondo de puntos finos (textura tipo "plano") detrás del formulario.
+class _DotGridPainter extends CustomPainter {
+  final Color color;
+
+  const _DotGridPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const spacing = 20.0;
+    final paint = Paint()..color = color;
+    for (double y = spacing / 2; y < size.height; y += spacing) {
+      for (double x = spacing / 2; x < size.width; x += spacing) {
+        canvas.drawCircle(Offset(x, y), 1, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DotGridPainter oldDelegate) => oldDelegate.color != color;
 }

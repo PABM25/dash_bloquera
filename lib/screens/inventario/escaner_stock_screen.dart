@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:audioplayers/audioplayers.dart';
 import '../../providers/inventario_provider.dart';
 import '../../models/producto_modelo.dart';
+import '../../utils/background_write.dart';
 
 class EscanerStockScreen extends StatefulWidget {
   const EscanerStockScreen({super.key});
@@ -14,7 +14,6 @@ class EscanerStockScreen extends StatefulWidget {
 class _EscanerStockScreenState extends State<EscanerStockScreen> {
   final TextEditingController _barcodeCtrl = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  final AudioPlayer _audioPlayer = AudioPlayer();
 
   bool _isLoading = false;
   String _mensaje = "Escanea un código de barras para buscar el producto.";
@@ -33,7 +32,6 @@ class _EscanerStockScreenState extends State<EscanerStockScreen> {
   void dispose() {
     _barcodeCtrl.dispose();
     _focusNode.dispose();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -45,14 +43,21 @@ class _EscanerStockScreenState extends State<EscanerStockScreen> {
     });
 
     final provider = Provider.of<InventarioProvider>(context, listen: false);
-    final producto = await provider.buscarProductoPorBarcode(barcode.trim());
+    bool fallo = false;
+    final Producto? producto = await provider.buscarProductoPorBarcode(barcode.trim()).catchError((Object e) {
+      debugPrint("Buscar por código: $e");
+      fallo = true;
+      return null;
+    });
 
     if (!mounted) return;
 
-    if (producto != null) {
-      // Opcional: Reproducir sonido de éxito
-      // await _audioPlayer.play(AssetSource('sounds/beep.mp3')); // Si tienes el asset
-
+    if (fallo) {
+      setState(() {
+        _mensaje = "No se pudo buscar el código. Revisa la conexión.";
+        _mensajeColor = Colors.red;
+      });
+    } else if (producto != null) {
       setState(() {
         _mensaje = "Producto encontrado: ${producto.nombre}";
         _mensajeColor = Colors.green;
@@ -127,13 +132,15 @@ class _EscanerStockScreenState extends State<EscanerStockScreen> {
     final int cantidad = int.tryParse(cantidadStr) ?? 0;
     if (cantidad > 0) {
       final provider = Provider.of<InventarioProvider>(context, listen: false);
-      provider.reponerStock(producto, cantidad);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Se sumaron $cantidad unidades a ${producto.nombre}')),
-        );
-      }
+      final messenger = ScaffoldMessenger.of(context);
+      guardarEnSegundoPlano(
+        messenger,
+        provider.reponerStock(producto, cantidad),
+        mensajeError: "No se pudo sumar stock a ${producto.nombre}.",
+      );
+      messenger.showSnackBar(
+        SnackBar(content: Text('Se sumaron $cantidad unidades a ${producto.nombre}')),
+      );
     }
     Navigator.pop(ctx);
     FocusScope.of(context).requestFocus(_focusNode);

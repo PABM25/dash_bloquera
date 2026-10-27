@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../providers/rh_provider.dart';
 import '../../models/trabajador_model.dart';
 import '../../utils/validators.dart';
+import '../../utils/background_write.dart';
+import '../../utils/formatters.dart';
 
 class FormTrabajadorScreen extends StatefulWidget {
   final Trabajador? trabajador;
@@ -39,14 +41,22 @@ class _FormTrabajadorScreenState extends State<FormTrabajadorScreen> {
 
     final t = Trabajador(
       id: widget.trabajador?.id ?? '',
-      nombre: _nombreCtrl.text,
-      rut: _rutCtrl.text,
-      cargo: _cargoCtrl.text,
-      salarioPorDia: double.parse(_salarioCtrl.text),
+      nombre: _nombreCtrl.text.trim(),
+      rut: _rutCtrl.text.trim(),
+      cargo: _cargoCtrl.text.trim(),
+      // El validador garantiza que el salario es un número válido.
+      salarioPorDia: Formatters.parseMonto(_salarioCtrl.text)!,
       tipoProyecto: _tipoProyecto,
+      // El formulario no edita estos campos: se conservan (antes se borraban).
+      email: widget.trabajador?.email,
+      telefono: widget.trabajador?.telefono,
     );
 
-    Provider.of<RhProvider>(context, listen: false).saveTrabajador(t);
+    guardarEnSegundoPlano(
+      ScaffoldMessenger.of(context),
+      Provider.of<RhProvider>(context, listen: false).saveTrabajador(t),
+      mensajeError: "No se pudo guardar el trabajador.",
+    );
     Navigator.pop(context);
   }
 

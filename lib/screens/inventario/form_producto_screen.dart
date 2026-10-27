@@ -4,6 +4,8 @@ import '../../models/producto_modelo.dart';
 import '../../providers/inventario_provider.dart';
 import '../../utils/validators.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/background_write.dart';
+import '../../utils/formatters.dart';
 
 class FormProductoScreen extends StatefulWidget {
   final Producto? producto; // Si es null, estamos creando. Si no, editando.
@@ -26,7 +28,8 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
     super.initState();
     _nombreCtrl = TextEditingController(text: widget.producto?.nombre ?? '');
     _stockCtrl = TextEditingController(text: widget.producto?.stock.toString() ?? '');
-    _costoCtrl = TextEditingController(text: widget.producto?.precioCosto.toString() ?? '');
+    final costo = widget.producto?.precioCosto;
+    _costoCtrl = TextEditingController(text: costo == null ? '' : Formatters.montoParaEditar(costo));
     _descCtrl = TextEditingController(text: widget.producto?.descripcion ?? '');
     _barcodeCtrl = TextEditingController(text: widget.producto?.barcode ?? '');
   }
@@ -35,15 +38,20 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final provider = Provider.of<InventarioProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
     final nombre = _nombreCtrl.text.trim();
     // Los validadores del formulario garantizan que estos valores son numéricos.
     final stock = int.parse(_stockCtrl.text.trim());
-    final costo = double.parse(_costoCtrl.text.trim());
+    final costo = Formatters.parseMonto(_costoCtrl.text)!;
     final desc = _descCtrl.text.trim();
     final barcode = _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim();
 
     if (widget.producto == null) {
-      provider.addProducto(nombre, stock, costo, desc, barcode);
+      guardarEnSegundoPlano(
+        messenger,
+        provider.addProducto(nombre, stock, costo, desc, barcode),
+        mensajeError: "No se pudo crear el producto '$nombre'.",
+      );
     } else {
       // Crear objeto actualizado manteniendo el ID original
       final actualizado = Producto(
@@ -55,9 +63,15 @@ class _FormProductoScreenState extends State<FormProductoScreen> {
         barcode: barcode,
       );
       // Solo se envía la diferencia de stock para no pisar ventas concurrentes.
-      provider.updateProducto(
-        actualizado,
-        ajusteStock: stock - widget.producto!.stock,
+      // Si con las ventas recientes el stock quedaría negativo, las reglas lo
+      // rechazan y se avisa.
+      guardarEnSegundoPlano(
+        messenger,
+        provider.updateProducto(
+          actualizado,
+          ajusteStock: stock - widget.producto!.stock,
+        ),
+        mensajeError: "No se pudo actualizar '$nombre'. Revisa el stock e intenta nuevamente.",
       );
     }
     Navigator.pop(context);

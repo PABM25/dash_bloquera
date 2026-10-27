@@ -1,15 +1,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/proveedor_model.dart';
+import '../utils/shared_stream.dart';
 
 class ProveedoresProvider with ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  Stream<List<Proveedor>> get proveedoresStream {
-    return _db.collection('proveedores').snapshots().map((snapshot) {
+  late final SharedStream<List<Proveedor>> _proveedores = SharedStream(
+    () => _db.collection('proveedores').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => Proveedor.fromFirestore(doc.data(), doc.id)).toList();
-    });
-  }
+    }),
+  );
+
+  Stream<List<Proveedor>> get proveedoresStream => _proveedores.stream;
 
   Future<void> agregarProveedor(String nombre, String rut, String contacto) async {
     await _db.collection('proveedores').add({

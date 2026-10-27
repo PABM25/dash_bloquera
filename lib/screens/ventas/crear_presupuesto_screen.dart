@@ -10,6 +10,8 @@ import '../../providers/presupuestos_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../utils/pdf_generator.dart';
 import '../../utils/app_theme.dart'; // IMPORTANTE: Importamos tu tema
+import '../../widgets/app_shell.dart';
+import '../../widgets/loading_dialog.dart';
 
 class CrearPresupuestoScreen extends StatefulWidget {
   const CrearPresupuestoScreen({super.key});
@@ -30,9 +32,9 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
   final currencyFormat = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
   final dateFormat = DateFormat('dd/MM/yyyy');
 
-  double get subtotalVenta => carrito.fold(0, (sum, item) => sum + item.totalLinea);
-  double get impuesto => subtotalVenta * Provider.of<SettingsProvider>(context, listen: false).taxRate;
-  double get totalVenta => subtotalVenta + impuesto;
+  // Precios netos + IVA: misma fórmula que usa el provider al guardar.
+  double get tasaIva => Provider.of<SettingsProvider>(context, listen: false).taxRate;
+  double get totalVenta => TotalesOrden.calcular(carrito, tasaIva).total;
 
   Future<void> _seleccionarFecha() async {
     final picked = await showDatePicker(
@@ -95,7 +97,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                           child: Icon(Icons.inventory_2_outlined, color: AppTheme.primary),
                         ),
                         title: Text(p.nombre, style: const TextStyle(fontWeight: FontWeight.w500)),
-                        subtitle: Text("Precio Base: \$${p.precioCosto}"), 
+                        subtitle: Text("Costo: ${currencyFormat.format(p.precioCosto)}"),
                         onTap: () {
                           Navigator.pop(ctx);
                           _dialogoCantidadProducto(p);
@@ -262,84 +264,73 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
       builder: (_) => const Center(child: CircularProgressIndicator())
     );
 
+    final Presupuesto presupuesto;
     try {
-      await provider.crearPresupuesto(
+      presupuesto = await provider.crearPresupuesto(
         cliente: _clienteCtrl.text,
         rut: _rutCtrl.text,
         direccion: _direccionCtrl.text,
         items: carrito,
         fechaEmision: _fechaEmision,
+        tasaIva: tasaIva,
       );
-
-      navigator.pop(); // Cierra loading
-
-      if (!mounted) return;
-
-      await showDialog(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          title: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 30),
-              SizedBox(width: 10),
-              Text("¡Cotización Creada!"),
-            ],
-          ),
-          content: const Text("El presupuesto se ha guardado correctamente.\n¿Deseas generar el PDF ahora?"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(); 
-                navigator.pop(); 
-              },
-              child: const Text("Salir", style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.picture_as_pdf),
-              label: const Text("Descargar PDF"),
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
-              onPressed: () async {
-                final dialogNavigator = Navigator.of(dialogContext);
-
-                final tempPresupuesto = Presupuesto(
-                  id: 'temp', 
-                  folio: 'NUEVO',
-                  fechaEmision: _fechaEmision,
-                  fechaVencimiento: _fechaEmision.add(const Duration(days: 15)),
-                  cliente: _clienteCtrl.text,
-                  rut: _rutCtrl.text,
-                  direccion: _direccionCtrl.text,
-                  total: totalVenta,
-                  items: carrito
-                );
-                
-                await PdfGenerator.generatePresupuestoA4(tempPresupuesto);
-                
-                dialogNavigator.pop(); 
-                navigator.pop();       
-              },
-            ),
-          ],
-        ),
-      );
-
     } catch (e) {
-      navigator.pop(); 
+      navigator.pop(); // Cierra loading
       debugPrint("Crear presupuesto error: $e");
       scaffoldMessenger.showSnackBar(const SnackBar(content: Text("No se pudo guardar la cotización. Intenta nuevamente."), backgroundColor: Colors.red));
+      return;
     }
+
+    navigator.pop(); // Cierra loading
+
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 30),
+            SizedBox(width: 10),
+            Text("¡Cotización Creada!"),
+          ],
+        ),
+        content: const Text("El presupuesto se ha guardado correctamente.\n¿Deseas generar el PDF ahora?"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(); 
+              navigator.pop(); 
+            },
+            child: const Text("Salir", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.picture_as_pdf),
+            label: const Text("Descargar PDF"),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
+            onPressed: () async {
+              final dialogNavigator = Navigator.of(dialogContext);
+              dialogNavigator.pop();
+              if (!mounted) return;
+              // PDF con el folio y los totales realmente guardados.
+              await runWithLoading(
+                context,
+                (close) => PdfGenerator.generatePresupuestoA4(presupuesto, onGenerated: close),
+              );
+              navigator.pop();
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: ShellScope.menuButton(context),
         title: const Text("Nueva Cotización", style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppTheme.primary, // USAMOS EL COLOR DEL TEMA
-        foregroundColor: Colors.white,
-        centerTitle: true,
-        elevation: 0,
       ),
       body: Column(
         children: [
@@ -355,8 +346,6 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                       children: [
                         // Datos Cliente
                     Card(
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: Padding(
                         padding: const EdgeInsets.all(20),
                         child: Column(
@@ -403,7 +392,6 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                               backgroundColor: AppTheme.primary, // COLOR TEMA
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              elevation: 2,
                             ),
                           ),
                         ),
@@ -418,7 +406,6 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                               backgroundColor: Colors.orange[800], // Mantenemos Naranja para diferenciar
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              elevation: 2,
                             ),
                           ),
                         ),
@@ -464,7 +451,6 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                       ...carrito.map((item) {
                         final bool esServicio = item.productoId.startsWith('SERVICIO_');
                         return Card(
-                          elevation: 1,
                           margin: const EdgeInsets.only(bottom: 10),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           child: ListTile(
@@ -533,7 +519,6 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 3,
                     ),
                     child: const Row(
                       children: [

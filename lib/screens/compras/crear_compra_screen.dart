@@ -7,6 +7,7 @@ import '../../providers/inventario_provider.dart';
 import '../../models/proveedor_model.dart';
 import '../../models/compra_model.dart';
 import '../../models/producto_modelo.dart';
+import '../../utils/formatters.dart';
 
 class CrearCompraScreen extends StatefulWidget {
   const CrearCompraScreen({super.key});
@@ -46,7 +47,7 @@ class _CrearCompraScreenState extends State<CrearCompraScreen> {
 
   void _dialogoCantidadCosto(Producto p) {
     final cantCtrl = TextEditingController(text: "1");
-    final costoCtrl = TextEditingController(text: p.precioCosto.toString());
+    final costoCtrl = TextEditingController(text: Formatters.montoParaEditar(p.precioCosto));
 
     showDialog(
       context: context,
@@ -64,8 +65,8 @@ class _CrearCompraScreenState extends State<CrearCompraScreen> {
           ElevatedButton(
             onPressed: () {
               final cant = int.tryParse(cantCtrl.text) ?? 0;
-              final costo = double.tryParse(costoCtrl.text) ?? 0.0;
-              if (cant > 0 && cant <= 1000000 && costo.isFinite && costo > 0) {
+              final costo = Formatters.parseMonto(costoCtrl.text) ?? 0.0;
+              if (cant > 0 && cant <= 1000000 && costo > 0) {
                 setState(() {
                   _carrito.add(CompraItem(productoId: p.id, nombre: p.nombre, cantidad: cant, costoUnitario: costo, totalLinea: cant * costo));
                 });
@@ -123,12 +124,18 @@ class _CrearCompraScreenState extends State<CrearCompraScreen> {
                   stream: Provider.of<ProveedoresProvider>(context, listen: false).proveedoresStream,
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) return const LinearProgressIndicator();
-                    return DropdownButton<Proveedor>(
+                    final proveedores = snapshot.data!;
+                    // Se usa el ID como valor: cada actualización del stream crea
+                    // objetos nuevos y comparar por instancia rompía el Dropdown.
+                    final seleccionado = proveedores.where((p) => p.id == _proveedorSeleccionado?.id).firstOrNull;
+                    return DropdownButton<String>(
                       isExpanded: true,
-                      value: _proveedorSeleccionado,
+                      value: seleccionado?.id,
                       hint: const Text("Elija un proveedor"),
-                      items: snapshot.data!.map((p) => DropdownMenuItem(value: p, child: Text(p.nombre))).toList(),
-                      onChanged: (val) => setState(() => _proveedorSeleccionado = val),
+                      items: proveedores.map((p) => DropdownMenuItem(value: p.id, child: Text(p.nombre))).toList(),
+                      onChanged: (id) => setState(() {
+                        _proveedorSeleccionado = proveedores.firstWhere((p) => p.id == id);
+                      }),
                     );
                   },
                 ),
@@ -147,7 +154,7 @@ class _CrearCompraScreenState extends State<CrearCompraScreen> {
                       final item = _carrito[index];
                       return ListTile(
                         title: Text(item.nombre),
-                        subtitle: Text("${item.cantidad} x \$${item.costoUnitario} = \$${item.totalLinea}"),
+                        subtitle: Text("${item.cantidad} x ${Formatters.formatCurrency(item.costoUnitario)} = ${Formatters.formatCurrency(item.totalLinea)}"),
                         trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => setState(() => _carrito.removeAt(index))),
                       );
                     },

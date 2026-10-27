@@ -1,82 +1,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart'; // Necesario para la app secundaria
+import '../core/failure.dart';
 import '../models/trabajador_model.dart';
+import '../utils/shared_stream.dart';
 
 
 class RhProvider with ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  static const _rolesValidos = {'ADMIN'};
 
 // --- TRABAJADORES ---
-  Stream<List<Trabajador>> get trabajadoresStream {
-    return _db.collection('trabajadores').orderBy('nombre').snapshots().map(
+  late final SharedStream<List<Trabajador>> _trabajadores = SharedStream(
+    () => _db.collection('trabajadores').orderBy('nombre').snapshots().map(
       (snap) => snap.docs.map((doc) => Trabajador.fromFirestore(doc)).toList(),
-    );
-  }
+    ),
+  );
 
-  // NUEVO: Crea usuario de Auth + Perfil de Usuario + Ficha de Trabajador
-  Future<void> crearTrabajadorConCuenta({
-    required Trabajador trabajador,
-    required String password,
-    required String rol, // Debe coincidir con los roles válidos de firestore.rules
-  }) async {
-    if (!_rolesValidos.contains(rol)) {
-      throw ArgumentError.value(rol, 'rol', 'Rol no permitido');
-    }
-    FirebaseApp? tempApp;
-    try {
-      // 1. Inicializamos una app secundaria para no cerrar la sesión del admin actual
-      tempApp = await Firebase.initializeApp(
-        name: 'registroTemporal',
-        options: Firebase.app().options,
-      );
-
-      // 2. Creamos el usuario en Auth usando esa app secundaria
-      UserCredential cred = await FirebaseAuth.instanceFor(app: tempApp)
-          .createUserWithEmailAndPassword(
-        email: trabajador.email!, // El email es obligatorio aquí
-        password: password,
-      );
-
-      String uid = cred.user!.uid;
-
-      // 3. Guardamos el Rol en la colección 'users' (Para el Login)
-      await _db.collection('users').doc(uid).set({
-        'email': trabajador.email,
-        'nombre': trabajador.nombre,
-        'role': rol,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // 4. Guardamos la Ficha en 'trabajadores' usando EL MISMO UID (Para RRHH)
-      //    Esto vincula automáticamente el Login con los datos de RRHH.
-      final trabajadorConId = Trabajador(
-        id: uid, // Usamos el UID de Auth como ID del documento
-        nombre: trabajador.nombre,
-        rut: trabajador.rut,
-        email: trabajador.email,
-        cargo: trabajador.cargo,
-        tipoProyecto: trabajador.tipoProyecto,
-        salarioPorDia: trabajador.salarioPorDia,
-        telefono: trabajador.telefono,
-      );
-
-      await _db.collection('trabajadores').doc(uid).set(trabajadorConId.toFirestore());
-
-    } catch (e) {
-      rethrow; // Re-anzamos el error para que la pantalla lo muestre
-    } finally {
-      // Importante: Borrar la app temporal para liberar memoria
-      await tempApp?.delete();
-    }
-  }
+  Stream<List<Trabajador>> get trabajadoresStream => _trabajadores.stream;
 
   // Guardar/Actualizar trabajador existente (sin tocar Auth)
   Future<void> saveTrabajador(Trabajador t) async {
     if (t.id.isEmpty) {
-      // Si llega aquí sin ID, es un error de lógica, pero lo manejamos guardando normal
       await _db.collection('trabajadores').add(t.toFirestore());
     } else {
       await _db.collection('trabajadores').doc(t.id).update(t.toFirestore());
@@ -84,27 +28,36 @@ class RhProvider with ChangeNotifier {
   }
 
   Future<void> deleteTrabajador(String id) async {
-    // Nota: Esto borra la ficha de RRHH, pero NO borra el usuario de Auth 
-    // (Borrar de Auth requiere Cloud Functions o re-autenticación admin)
-    await _db.collection('trabajadores').doc(id).delete();
-    
-    // Si el trabajador tiene cuenta, se le quita el acceso (las reglas niegan
-    // todo a DESACTIVADO). Para bloquear también el login, deshabilitar la
-    // cuenta en Firebase Auth.
+    // Evita que un administrador se quite el acceso a sí mismo.
+    if (id == FirebaseAuth.instance.currentUser?.uid) {
+      throw Failure(message: "No puedes eliminar tu propia ficha.");
+    }
+
+    // Nota: Esto borra la ficha de RRHH, pero NO borra el usuario de Auth
+    // (Borrar de Auth requiere Cloud Functions o re-autenticación admin).
+    // Si el trabajador tiene cuenta, se le quita el acceso en el mismo batch
+    // (las reglas niegan todo a DESACTIVADO). Para bloquear también el login,
+    // deshabilitar la cuenta en Firebase Auth.
     final userRef = _db.collection('users').doc(id);
     final userSnap = await userRef.get();
+
+    final batch = _db.batch();
+    batch.delete(_db.collection('trabajadores').doc(id));
     if (userSnap.exists) {
-      await userRef.update({'role': 'DESACTIVADO'});
+      batch.update(userRef, {'role': 'DESACTIVADO'});
     }
+    await batch.commit();
   }
 
 
   // --- ASISTENCIA ---
-  
+
+  static DateTime _inicioDelDia(DateTime fecha) => DateTime(fecha.year, fecha.month, fecha.day);
+
   // Registrar asistencia validando duplicados (Logica de tu view 'asistencia_manual')
   Future<String?> registrarAsistencia(String trabajadorId, String nombre, DateTime fecha, String tipoProyecto) async {
-    // Normalizar fecha (sin horas) para buscar
-    DateTime inicioDia = DateTime(fecha.year, fecha.month, fecha.day);
+    // Normalizar fecha (sin horas) para buscar y para guardar
+    DateTime inicioDia = _inicioDelDia(fecha);
     DateTime finDia = inicioDia.add(const Duration(days: 1));
 
     // Buscar si ya existe asistencia ese día
@@ -115,26 +68,31 @@ class RhProvider with ChangeNotifier {
         .get();
 
     if (query.docs.isNotEmpty) {
-      return "Este trabajador ya tiene asistencia registrada hoy.";
+      return "Este trabajador ya tiene asistencia registrada en esa fecha.";
     }
 
     await _db.collection('asistencias').add({
       'trabajadorId': trabajadorId,
       'nombre_trabajador': nombre, // Desnormalizado para lista rápida
-      'fecha': Timestamp.fromDate(fecha),
+      'fecha': Timestamp.fromDate(inicioDia),
       'tipo_proyecto': tipoProyecto,
     });
     return null;
   }
 
   // --- CÁLCULO DE SALARIOS ---
-  
-  // Calcula el salario basado en asistencias en un rango (como tu 'calcular_salario')
+
+  // Calcula el salario basado en asistencias en un rango de días, ambos
+  // incluidos (como tu 'calcular_salario'). Antes el día final quedaba fuera
+  // porque "Hasta" llega a las 00:00 y las asistencias se guardaban con hora.
   Future<Map<String, dynamic>> calcularSalario(String trabajadorId, double salarioDiario, DateTime inicio, DateTime fin) async {
+    final desde = _inicioDelDia(inicio);
+    final hasta = _inicioDelDia(fin).add(const Duration(days: 1));
+
     final query = await _db.collection('asistencias')
         .where('trabajadorId', isEqualTo: trabajadorId)
-        .where('fecha', isGreaterThanOrEqualTo: Timestamp.fromDate(inicio))
-        .where('fecha', isLessThanOrEqualTo: Timestamp.fromDate(fin))
+        .where('fecha', isGreaterThanOrEqualTo: Timestamp.fromDate(desde))
+        .where('fecha', isLessThan: Timestamp.fromDate(hasta))
         .get();
 
     int diasTrabajados = query.docs.length;

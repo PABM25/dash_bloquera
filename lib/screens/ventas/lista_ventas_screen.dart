@@ -7,6 +7,8 @@ import 'crear_venta_screen.dart';
 import 'detalle_venta_screen.dart';
 import '../../utils/export_util.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/app_shell.dart';
+import '../../widgets/loading_dialog.dart';
 
 class ListaVentasScreen extends StatefulWidget {
   const ListaVentasScreen({super.key});
@@ -22,7 +24,9 @@ class _ListaVentasScreenState extends State<ListaVentasScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
+      // Cargar la siguiente página un poco antes de llegar al final.
+      final position = _scrollController.position;
+      if (position.pixels >= position.maxScrollExtent - 200) {
         Provider.of<VentasProvider>(context, listen: false).fetchVentas();
       }
     });
@@ -41,6 +45,7 @@ class _ListaVentasScreenState extends State<ListaVentasScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: ShellScope.menuButton(context),
         title: const Text('Órdenes de Compra'),
         actions: [
           IconButton(
@@ -48,18 +53,21 @@ class _ListaVentasScreenState extends State<ListaVentasScreen> {
             tooltip: 'Exportar CSV',
             onPressed: () async {
               final ventasProvider = Provider.of<VentasProvider>(context, listen: false);
-              final List<Venta> ventas = await ventasProvider.ventasStream.first;
-              if (ventas.isNotEmpty) {
-                List<List<dynamic>> rows = [
-                  ["Folio", "Cliente", "Fecha", "Total", "Estado"]
-                ];
-                for (var v in ventas) {
-                  rows.add([v.folio, v.cliente, dateFormat.format(v.fecha), v.total, v.estadoPago]);
-                }
-                if (context.mounted) {
-                  await ExportUtil.exportToCSV(context, rows, "ventas_reporte");
-                }
-              }
+              await runWithLoading(
+                context,
+                message: 'Generando reporte…',
+                (close) async {
+                  final List<Venta> ventas = await ventasProvider.fetchVentasParaExportar();
+                  if (ventas.isEmpty || !context.mounted) return;
+                  List<List<dynamic>> rows = [
+                    ["Folio", "Cliente", "Fecha", "Total", "Estado"]
+                  ];
+                  for (var v in ventas) {
+                    rows.add([v.folio, v.cliente, dateFormat.format(v.fecha), v.total, v.estadoPago]);
+                  }
+                  await ExportUtil.exportToCSV(context, rows, "ventas_reporte", onGenerated: close);
+                },
+              );
             },
           )
         ],
@@ -77,6 +85,21 @@ class _ListaVentasScreenState extends State<ListaVentasScreen> {
           }
 
           final ventas = provider.ventas;
+          if (ventas.isEmpty && provider.error != null) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(provider.error!),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => provider.fetchVentas(refresh: true),
+                    child: const Text("Reintentar"),
+                  ),
+                ],
+              ),
+            );
+          }
           if (ventas.isEmpty) return const Center(child: Text("No hay ventas registradas"));
 
           return RefreshIndicator(
@@ -90,9 +113,18 @@ class _ListaVentasScreenState extends State<ListaVentasScreen> {
                   itemCount: ventas.length + (provider.hasMore ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (index == ventas.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(child: CircularProgressIndicator()),
+                      // Botón visible también cuando la página cabe en pantalla
+                      // (ahí no hay scroll que dispare la carga).
+                      return Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Center(
+                          child: provider.isLoading
+                              ? const CircularProgressIndicator()
+                              : OutlinedButton(
+                                  onPressed: provider.fetchVentas,
+                                  child: Text(provider.error != null ? "Reintentar" : "Cargar más"),
+                                ),
+                        ),
                       );
                     }
                 final venta = ventas[index];
@@ -100,7 +132,6 @@ class _ListaVentasScreenState extends State<ListaVentasScreen> {
                   String estadoTexto = venta.estadoPago;
 
                   return Card(
-                    elevation: 3,
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     child: ListTile(

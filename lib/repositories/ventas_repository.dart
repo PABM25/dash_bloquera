@@ -9,16 +9,58 @@ class VentasRepository {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Original stream definition with optional limit
-  Stream<List<Venta>> getVentasStream({int limit = 100}) {
+  // Despachos: consulta propia, independiente de cuántas ventas se hayan
+  // paginado en la lista. Se ordena en el cliente para no requerir un índice
+  // compuesto (los pendientes son pocos).
+  Stream<List<Venta>> getDespachosPendientesStream() {
     return _db
         .collection('ventas')
-        .orderBy('fecha', descending: true)
-        .limit(limit)
+        .where('estado_entrega', isEqualTo: 'PENDIENTE')
         .snapshots()
-        .map(
-          (snap) => snap.docs.map((doc) => Venta.fromFirestore(doc)).toList(),
-        );
+        .map((snap) {
+          final ventas = snap.docs.map((doc) => Venta.fromFirestore(doc)).toList();
+          ventas.sort((a, b) => b.fecha.compareTo(a.fecha));
+          return ventas;
+        });
+  }
+
+  Future<Venta?> getVentaById(String id) async {
+    final snap = await _db.collection('ventas').doc(id).get();
+    if (!snap.exists) return null;
+    return Venta.fromFirestore(snap);
+  }
+
+  Future<void> marcarEntrega(String ventaId, String nuevoEstado) async {
+    await _db.collection('ventas').doc(ventaId).update({'estado_entrega': nuevoEstado});
+  }
+
+  // Migración única: las ventas creadas antes de guardar 'estado_entrega'
+  // no aparecen en la consulta de despachos. Se les asigna PENDIENTE, que es
+  // como la app ya las mostraba. Devuelve cuántas se actualizaron.
+  Future<int> completarEstadoEntregaAntiguo() async {
+    try {
+      final snap = await _db.collection('ventas').get();
+      final sinEstado = snap.docs.where((d) => !d.data().containsKey('estado_entrega')).toList();
+
+      // Un batch admite hasta 500 escrituras.
+      for (var i = 0; i < sinEstado.length; i += 450) {
+        final batch = _db.batch();
+        for (final doc in sinEstado.skip(i).take(450)) {
+          batch.update(doc.reference, {'estado_entrega': 'PENDIENTE'});
+        }
+        await batch.commit();
+      }
+      return sinEstado.length;
+    } on FirebaseException catch (e) {
+      debugPrint("completarEstadoEntregaAntiguo: ${e.code}");
+      throw Failure(message: _mensajeFirebase(e), code: e.code);
+    }
+  }
+
+  // Lectura única (sin escucha en tiempo real) para exportar reportes.
+  Future<List<Venta>> getTodasLasVentas() async {
+    final snap = await _db.collection('ventas').orderBy('fecha', descending: true).get();
+    return snap.docs.map((doc) => Venta.fromFirestore(doc)).toList();
   }
 
   // Future for pagination
@@ -45,10 +87,14 @@ class VentasRepository {
     String? direccion,
     required List<ItemOrden> items,
     required DateTime fecha,
+    required double tasaIva,
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Failure(message: "Sesión expirada. Vuelve a ingresar.");
     if (items.isEmpty) throw Failure(message: "La venta no tiene productos.");
+    if (!tasaIva.isFinite || tasaIva < 0 || tasaIva > 1) {
+      throw Failure(message: "Tasa de IVA inválida.");
+    }
     for (final item in items) {
       if (item.cantidad <= 0 || !item.precioUnitario.isFinite || item.precioUnitario <= 0) {
         throw Failure(message: "Cantidad o precio inválido en ${item.nombre}.");
@@ -57,7 +103,6 @@ class VentasRepository {
 
     try {
       await _db.runTransaction((transaction) async {
-        double total = 0;
         double totalCosto = 0;
 
         // Listas temporales para guardar los datos leídos
@@ -98,10 +143,11 @@ class VentasRepository {
             'cantidad': item.cantidad,
           });
 
-          // El total se recalcula aquí; no se confía en totalLinea del cliente.
-          total += item.precioUnitario * item.cantidad;
           totalCosto += (producto.precioCosto * item.cantidad);
         }
+
+        // Los totales se recalculan aquí; no se confía en totalLinea del cliente.
+        final totales = TotalesOrden.calcular(items, tasaIva);
 
         // --- FASE 2: ESCRITURAS (Solo Updates y Sets) ---
 
@@ -137,10 +183,15 @@ class VentasRepository {
           'cliente': cliente.trim(),
           'rut': rut?.trim(),
           'direccion': direccion?.trim(),
-          'total': total,
+          'neto': totales.neto,
+          'iva': totales.iva,
+          'tasa_iva': tasaIva,
+          'total': totales.total,
           'total_costo': totalCosto,
-          'total_utilidad': total - totalCosto,
+          // La utilidad se mide sobre el neto: el IVA no es ingreso.
+          'total_utilidad': totales.neto - totalCosto,
           'estado_pago': 'PENDIENTE',
+          'estado_entrega': 'PENDIENTE',
           'monto_pagado': 0,
           'items': items.map((i) => i.toMap()).toList(),
           'createdBy': user.uid,

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/rh_provider.dart';
 import '../../models/trabajador_model.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/app_shell.dart';
 
 class AsistenciaScreen extends StatefulWidget {
   const AsistenciaScreen({super.key});
@@ -18,7 +19,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Registrar Asistencia")),
+      appBar: AppBar(leading: ShellScope.menuButton(context), title: const Text("Registrar Asistencia")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -81,12 +82,18 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
               child: ElevatedButton(
                 onPressed: _trabajadorSeleccionado == null ? null : () async {
                   final provider = Provider.of<RhProvider>(context, listen: false);
-                  String? error = await provider.registrarAsistencia(
-                    _trabajadorSeleccionado!.id,
-                    _trabajadorSeleccionado!.nombre,
-                    _fechaSeleccionada,
-                    _trabajadorSeleccionado!.tipoProyecto
-                  );
+                  String? error;
+                  try {
+                    error = await provider.registrarAsistencia(
+                      _trabajadorSeleccionado!.id,
+                      _trabajadorSeleccionado!.nombre,
+                      _fechaSeleccionada,
+                      _trabajadorSeleccionado!.tipoProyecto
+                    );
+                  } catch (e) {
+                    debugPrint("Registrar asistencia: $e");
+                    error = "No se pudo registrar la asistencia. Revisa la conexión.";
+                  }
 
                   if (!context.mounted) return;
                   if (error != null) {

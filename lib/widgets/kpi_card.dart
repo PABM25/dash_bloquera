@@ -29,103 +29,106 @@ class _KpiCardState extends State<KpiCard> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? AppTheme.navyBorder : AppTheme.ash;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        transform: Matrix4.identity()
-          ..translateByDouble(0.0, _isHovered ? -4.0 : 0.0, 0.0, 1.0), // Hover flotante
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        // Tarjeta plana: el borde define el contenedor; al pasar el mouse
+        // aparece un anillo sutil en lugar de una sombra flotante.
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: _isHovered
-            ? AppTheme.softShadow.map((s) => BoxShadow(
-                color: s.color.withValues(alpha: s.color.a * 1.5),
-                blurRadius: s.blurRadius * 1.5,
-                offset: s.offset,
-              )).toList()
-            : AppTheme.softShadow,
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+          boxShadow: _isHovered && !isDark ? AppTheme.ringShadow : null,
           border: Border.all(
-            color: _isHovered ? widget.color.withValues(alpha: 0.3) : Colors.grey.shade100,
+            color: _isHovered ? (isDark ? scheme.outline : AppTheme.smoke) : borderColor,
             width: 1,
           ),
         ),
-        child: InkWell(
-          onTap: widget.onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-              // Encabezado con Icono
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: widget.color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(widget.icon, color: widget.color, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        widget.title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w600,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Encabezado: etiqueta atenuada + icono con un solo acento
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                ),
-              
-              const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: widget.color.withValues(alpha: isDark ? 0.2 : 0.1),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                        ),
+                        child: Icon(widget.icon, color: widget.color, size: 18),
+                      ),
+                    ],
+                  ),
 
-              // Valor Principal (Con ajuste automático de tamaño)
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      widget.value,
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black87,
-                        letterSpacing: -0.5,
+                  const SizedBox(height: 8),
+
+                  // Valor Principal (Con ajuste automático de tamaño)
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        widget.value,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface,
+                          letterSpacing: -0.8,
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                // Subtítulo
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.subtitle,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: widget.color,
-                          fontWeight: FontWeight.w600,
+                  // Subtítulo
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.subtitle,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(Icons.arrow_forward_ios, size: 10, color: widget.color),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_forward,
+                        size: 14,
+                        color: _isHovered ? widget.color : scheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

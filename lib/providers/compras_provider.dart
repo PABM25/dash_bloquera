@@ -3,16 +3,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../core/failure.dart';
 import '../models/compra_model.dart';
-import '../providers/inventario_provider.dart';
 
 class ComprasProvider with ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  ComprasProvider(InventarioProvider invProvider);
+  static const int pageSize = 30;
 
-  Stream<List<Compra>> get comprasStream {
-    return _db.collection('compras').orderBy('fecha', descending: true).snapshots().map((snapshot) {
+  // Paginado: la pantalla pide más documentos aumentando el límite.
+  Stream<List<Compra>> comprasStream({int limit = pageSize}) {
+    return _db.collection('compras').orderBy('fecha', descending: true).limit(limit).snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => Compra.fromFirestore(doc)).toList();
     });
   }
@@ -36,7 +36,7 @@ class ComprasProvider with ChangeNotifier {
 
     // El total se recalcula aquí; no se confía en totalLinea del cliente.
     final double total =
-        items.fold(0.0, (sum, item) => sum + item.cantidad * item.costoUnitario);
+        items.fold(0.0, (acc, item) => acc + item.cantidad * item.costoUnitario);
 
     try {
       await _db.runTransaction((transaction) async {

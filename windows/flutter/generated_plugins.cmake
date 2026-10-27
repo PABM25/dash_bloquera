@@ -3,13 +3,11 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  audioplayers_windows
   cloud_firestore
   connectivity_plus
   firebase_app_check
   firebase_auth
   firebase_core
-  firebase_storage
   printing
   share_plus
   url_launcher_windows

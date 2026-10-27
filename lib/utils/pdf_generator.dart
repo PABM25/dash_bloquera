@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -9,22 +9,47 @@ import 'formatters.dart';
 
 class PdfGenerator {
   
-  // Carga el logo desde los assets (Método estático)
-  static Future<Uint8List> _loadLogo() async {
+  // Logo liviano (300 px) cargado una sola vez y reutilizado en cada PDF.
+  // Antes se leía y decodificaba el original de 2157 px en cada documento.
+  static Uint8List? _logoCache;
+
+  static Future<Uint8List> loadLogo() async {
+    final cached = _logoCache;
+    if (cached != null) return cached;
     try {
-      final byteData = await rootBundle.load('assets/images/Logo.png');
-      return byteData.buffer.asUint8List();
+      final byteData = await rootBundle.load('assets/images/logo_pdf.png');
+      return _logoCache = byteData.buffer.asUint8List();
     } catch (e) {
       return Uint8List(0); // Retorna vacío si falla
     }
   }
 
+  // Arma el PDF fuera del hilo de la interfaz (en Web, donde no hay
+  // isolates, compute lo ejecuta en el mismo hilo).
+  static Future<Uint8List> _render<T>(
+    Future<Uint8List> Function((T, Uint8List)) builder,
+    T data,
+  ) async {
+    final stopwatch = Stopwatch()..start();
+    final logo = await loadLogo();
+    final bytes = await compute(builder, (data, logo));
+    debugPrint("PDF generado en ${stopwatch.elapsedMilliseconds} ms");
+    return bytes;
+  }
+
   // ==========================================
   // OPCIÓN 1: DISEÑO A4 (FACTURA ELEGANTE) - PARA DESCARGAR
   // ==========================================
-  static Future<void> generateInvoiceA4(Venta venta) async {
+  static Future<void> generateInvoiceA4(Venta venta, {VoidCallback? onGenerated}) async {
+    final bytes = await _render(_invoiceA4, venta);
+    onGenerated?.call();
+    // Usamos sharePdf para permitir descargar/compartir el archivo A4
+    await Printing.sharePdf(bytes: bytes, filename: 'Comprobante_${venta.folio}.pdf');
+  }
+
+  static Future<Uint8List> _invoiceA4((Venta, Uint8List) args) async {
+    final (venta, logoBytes) = args;
     final doc = pw.Document();
-    final logoBytes = await _loadLogo();
     final logoImage = logoBytes.isNotEmpty ? pw.MemoryImage(logoBytes) : null;
     
     // COLORES
@@ -167,7 +192,11 @@ class PdfGenerator {
                       pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.end,
                         children: [
-                          _buildTotalRow("Subtotal:", venta.total),
+                          if (venta.iva > 0) ...[
+                            _buildTotalRow("Neto:", venta.neto),
+                            _buildTotalRow("IVA:", venta.iva),
+                          ],
+                          _buildTotalRow("Total:", venta.total),
                           _buildTotalRow("Abonado:", venta.montoPagado),
                           pw.SizedBox(height: 5),
                           pw.Container(
@@ -212,20 +241,27 @@ class PdfGenerator {
       ),
     );
 
-    // Usamos sharePdf para permitir descargar/compartir el archivo A4
-    await Printing.sharePdf(
-      bytes: await doc.save(),
-      filename: 'Comprobante_${venta.folio}.pdf',
-    );
+    return doc.save();
   }
 
   // ==========================================
   // OPCIÓN 2: DISEÑO TICKET (80MM TÉRMICO) - PARA IMPRIMIR
   // ==========================================
-  static Future<void> generateTicket80mm(Venta venta) async {
+  static Future<void> generateTicket80mm(Venta venta, {VoidCallback? onGenerated}) async {
+    final bytes = await _render(_ticket80mm, venta);
+    onGenerated?.call();
+    // Mantenemos layoutPdf para imprimir ticket directamente; se entregan los
+    // bytes ya generados en lugar de rearmar el PDF en cada vista previa.
+    await Printing.layoutPdf(
+      onLayout: (format) async => bytes,
+      name: 'Ticket_${venta.folio}',
+    );
+  }
+
+  static Future<Uint8List> _ticket80mm((Venta, Uint8List) args) async {
+    final (venta, logoBytes) = args;
     final doc = pw.Document();
-    
-    final logoBytes = await _loadLogo();
+
     final logoImage = logoBytes.isNotEmpty ? pw.MemoryImage(logoBytes) : null;
 
     final double saldo = venta.total - venta.montoPagado;
@@ -290,6 +326,17 @@ class PdfGenerator {
 
               // Totales
               pw.SizedBox(height: 5),
+              if (venta.iva > 0) ...[
+                pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+                  pw.Text("Neto:", style: const pw.TextStyle(fontSize: 10)),
+                  pw.Text(Formatters.formatCurrency(venta.neto), style: const pw.TextStyle(fontSize: 10)),
+                ]),
+                pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+                  pw.Text("IVA:", style: const pw.TextStyle(fontSize: 10)),
+                  pw.Text(Formatters.formatCurrency(venta.iva), style: const pw.TextStyle(fontSize: 10)),
+                ]),
+                pw.SizedBox(height: 3),
+              ],
               pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
                 pw.Text("TOTAL:", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
                 pw.Text(Formatters.formatCurrency(venta.total), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
@@ -315,19 +362,21 @@ class PdfGenerator {
       ),
     );
 
-    // Mantenemos layoutPdf para imprimir ticket directamente
-    await Printing.layoutPdf(
-      onLayout: (format) async => doc.save(),
-      name: 'Ticket_${venta.folio}',
-    );
+    return doc.save();
   }
 
   // ==========================================
   // OPCIÓN 3: DISEÑO COTIZACIÓN A4
   // ==========================================
-  static Future<void> generatePresupuestoA4(Presupuesto presupuesto) async {
+  static Future<void> generatePresupuestoA4(Presupuesto presupuesto, {VoidCallback? onGenerated}) async {
+    final bytes = await _render(_presupuestoA4, presupuesto);
+    onGenerated?.call();
+    await Printing.sharePdf(bytes: bytes, filename: 'Cotizacion_${presupuesto.folio}.pdf');
+  }
+
+  static Future<Uint8List> _presupuestoA4((Presupuesto, Uint8List) args) async {
+    final (presupuesto, logoBytes) = args;
     final doc = pw.Document();
-    final logoBytes = await _loadLogo();
     final logoImage = logoBytes.isNotEmpty ? pw.MemoryImage(logoBytes) : null;
     
     // COLORES (Mismos que la factura para consistencia)
@@ -435,6 +484,20 @@ class PdfGenerator {
                   ),
                   
                   pw.SizedBox(height: 10),
+                  if (presupuesto.iva > 0)
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      children: [
+                        pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.end,
+                          children: [
+                            _buildTotalRow("Neto:", presupuesto.neto),
+                            _buildTotalRow("IVA:", presupuesto.iva),
+                            pw.SizedBox(height: 5),
+                          ],
+                        ),
+                      ],
+                    ),
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.end,
                     children: [
@@ -450,10 +513,7 @@ class PdfGenerator {
       ),
     );
 
-    await Printing.sharePdf(
-      bytes: await doc.save(),
-      filename: 'Cotizacion_${presupuesto.folio}.pdf',
-    );
+    return doc.save();
   }
 
   // --- Widgets Auxiliares (Estáticos) ---

@@ -5,6 +5,7 @@ import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import '../../providers/settings_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/app_shell.dart';
 
 class UserSettingsScreen extends StatelessWidget {
   const UserSettingsScreen({super.key});
@@ -14,14 +15,41 @@ class UserSettingsScreen extends StatelessWidget {
     final user = Provider.of<AuthProvider>(context).currentUser;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Mi Cuenta")),
+      appBar: AppBar(leading: ShellScope.menuButton(context), title: const Text("Mi Cuenta")),
       body: ListView(
         children: [
-          UserAccountsDrawerHeader(
-            accountName: Text(user?.displayName ?? "Usuario"),
-            accountEmail: Text(user?.email ?? ""),
-            currentAccountPicture: const CircleAvatar(child: Icon(Icons.person, size: 40)),
-            decoration: const BoxDecoration(color: AppTheme.navy),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
+                  child: const Icon(Icons.person, size: 26, color: AppTheme.primary),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user?.displayName ?? "Usuario",
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        user?.email ?? "",
+                        style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           
           ListTile(

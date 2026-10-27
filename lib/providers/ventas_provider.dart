@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/venta_model.dart';
 import '../repositories/ventas_repository.dart';
+import '../utils/shared_stream.dart';
 
 class VentasProvider with ChangeNotifier {
   final VentasRepository _repository = VentasRepository();
@@ -17,9 +18,18 @@ class VentasProvider with ChangeNotifier {
   bool _hasMore = true;
   bool get hasMore => _hasMore;
 
+  // Error de la última carga (para no mostrar "No hay ventas" cuando falló).
+  String? _error;
+  String? get error => _error;
+
   DocumentSnapshot? _lastDoc;
 
   StreamSubscription<User?>? _authSub;
+
+  // Despachos pendientes: consulta propia, compartida entre pantallas.
+  late final SharedStream<List<Venta>> _despachos =
+      SharedStream(_repository.getDespachosPendientesStream);
+  Stream<List<Venta>> get despachosPendientesStream => _despachos.stream;
 
   VentasProvider() {
     // Carga solo con sesión activa y descarta los datos del usuario anterior al salir.
@@ -28,6 +38,7 @@ class VentasProvider with ChangeNotifier {
         _ventas.clear();
         _lastDoc = null;
         _hasMore = true;
+        _error = null;
         notifyListeners();
       } else {
         fetchVentas(refresh: true);
@@ -52,6 +63,7 @@ class VentasProvider with ChangeNotifier {
 
     if (!_hasMore) return;
 
+    _error = null;
     _setLoading(true);
 
     try {
@@ -73,20 +85,22 @@ class VentasProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint("Error fetching ventas: $e");
+      _error = "No se pudieron cargar las ventas.";
     } finally {
       _setLoading(false);
     }
   }
 
-  // Mantener stream inicial para partes de la app que aún dependen de ello (ej. exportación)
-  Stream<List<Venta>> get ventasStream => _repository.getVentasStream(limit: 100);
+  // Para exportar: una lectura puntual en lugar de abrir una escucha en tiempo real.
+  Future<List<Venta>> fetchVentasParaExportar() => _repository.getTodasLasVentas();
 
   Future<void> crearVenta({
     required String cliente,
     String? rut,
     String? direccion,
     required List<ItemOrden> items,
-    required DateTime fecha, // Parámetro requerido nuevo
+    required DateTime fecha,
+    required double tasaIva,
   }) async {
     _setLoading(true);
     try {
@@ -95,35 +109,44 @@ class VentasProvider with ChangeNotifier {
         rut: rut,
         direccion: direccion,
         items: items,
-        fecha: fecha, // Pasando la fecha al repo
+        fecha: fecha,
+        tasaIva: tasaIva,
       );
-    } catch (e) {
-      rethrow;
     } finally {
       _setLoading(false);
     }
+    // La venta nueva debe aparecer en la lista sin recargar a mano.
+    unawaited(fetchVentas(refresh: true));
   }
 
   // El monto pagado y el total se leen en una transacción en el repositorio,
   // nunca desde el estado local (evita perder abonos concurrentes).
   Future<void> registrarPago(String ventaId, double montoAbono) async {
     await _repository.registrarPago(ventaId, montoAbono);
-    notifyListeners();
+    // Refleja el nuevo estado de pago en la lista.
+    try {
+      final actualizada = await _repository.getVentaById(ventaId);
+      if (actualizada != null) _reemplazarLocal(actualizada);
+    } catch (e) {
+      debugPrint("Refrescar venta tras pago: $e");
+    }
   }
 
   Future<void> marcarEntrega(String ventaId, String nuevoEstado) async {
-    await FirebaseFirestore.instance.collection('ventas').doc(ventaId).update({'estado_entrega': nuevoEstado});
-    // Actualizamos localmente si lo encontramos
+    await _repository.marcarEntrega(ventaId, nuevoEstado);
     final index = _ventas.indexWhere((v) => v.id == ventaId);
     if (index != -1) {
-      final old = _ventas[index];
-      _ventas[index] = Venta(
-        id: old.id, folio: old.folio, fecha: old.fecha, cliente: old.cliente, rut: old.rut, direccion: old.direccion,
-        total: old.total, totalCosto: old.totalCosto, totalUtilidad: old.totalUtilidad, estadoPago: old.estadoPago,
-        montoPagado: old.montoPagado, items: old.items, estadoEntrega: nuevoEstado
-      );
-      notifyListeners();
+      _reemplazarLocal(_ventas[index].copyWith(estadoEntrega: nuevoEstado));
     }
+  }
+
+  Future<int> completarEstadoEntregaAntiguo() => _repository.completarEstadoEntregaAntiguo();
+
+  void _reemplazarLocal(Venta venta) {
+    final index = _ventas.indexWhere((v) => v.id == venta.id);
+    if (index == -1) return;
+    _ventas[index] = venta;
+    notifyListeners();
   }
 
   void _setLoading(bool value) {

@@ -6,21 +6,28 @@ import '../../models/venta_model.dart';
 import '../../providers/ventas_provider.dart';
 import '../../utils/pdf_generator.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/loading_dialog.dart';
 
-class DetalleVentaScreen extends StatelessWidget {
-  final String ventaId;
+class DetalleVentaScreen extends StatefulWidget {
   final Venta ventaInicial;
 
-  DetalleVentaScreen({super.key, required this.ventaInicial})
-      : ventaId = ventaInicial.id;
+  const DetalleVentaScreen({super.key, required this.ventaInicial});
+
+  @override
+  State<DetalleVentaScreen> createState() => _DetalleVentaScreenState();
+}
+
+class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
+  // Escuchamos cambios en tiempo real por si se paga la venta. Se crea una
+  // vez: en build() se volvía a suscribir en cada redibujado.
+  late final Stream<DocumentSnapshot> ventaStream = FirebaseFirestore.instance
+      .collection('ventas')
+      .doc(widget.ventaInicial.id)
+      .snapshots();
 
   @override
   Widget build(BuildContext context) {
-    // Escuchamos cambios en tiempo real por si se paga la venta
-    final Stream<DocumentSnapshot> ventaStream = FirebaseFirestore.instance
-        .collection('ventas')
-        .doc(ventaId)
-        .snapshots();
+    final ventaInicial = widget.ventaInicial;
 
     return StreamBuilder<DocumentSnapshot>(
       stream: ventaStream,
@@ -64,8 +71,10 @@ class DetalleVentaScreen extends StatelessWidget {
                       title: const Text("Descargar Factura A4 (PDF)"),
                       onTap: () {
                         Navigator.pop(ctx);
-                        // Llamada estática corregida
-                        PdfGenerator.generateInvoiceA4(venta);
+                        runWithLoading(
+                          context,
+                          (close) => PdfGenerator.generateInvoiceA4(venta, onGenerated: close),
+                        );
                       },
                     ),
                     ListTile(
@@ -73,8 +82,10 @@ class DetalleVentaScreen extends StatelessWidget {
                       title: const Text("Imprimir Ticket (80mm)"),
                       onTap: () {
                         Navigator.pop(ctx);
-                        // Llamada estática corregida
-                        PdfGenerator.generateTicket80mm(venta);
+                        runWithLoading(
+                          context,
+                          (close) => PdfGenerator.generateTicket80mm(venta, onGenerated: close),
+                        );
                       },
                     ),
                   ],
@@ -100,17 +111,28 @@ class DetalleVentaScreen extends StatelessWidget {
                 TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
                 ElevatedButton(
                   onPressed: () async {
-                    final monto = double.tryParse(montoCtrl.text) ?? 0;
-                    if (!monto.isFinite || monto <= 0) return;
+                    final monto = Formatters.parseMonto(montoCtrl.text) ?? 0;
                     final messenger = ScaffoldMessenger.of(context);
+                    if (monto <= 0) {
+                      messenger.showSnackBar(const SnackBar(content: Text("Ingrese un monto mayor a 0")));
+                      return;
+                    }
+                    // Antes el exceso se descartaba sin avisar.
+                    if (monto > saldoPendiente) {
+                      messenger.showSnackBar(SnackBar(
+                        content: Text("El monto supera el saldo pendiente (${Formatters.formatCurrency(saldoPendiente)})"),
+                      ));
+                      return;
+                    }
+                    final provider = Provider.of<VentasProvider>(context, listen: false);
                     Navigator.pop(ctx);
                     try {
-                      await Provider.of<VentasProvider>(context, listen: false)
-                          .registrarPago(venta.id, monto);
-                    } on Failure catch (f) {
-                      messenger.showSnackBar(
-                        SnackBar(content: Text(f.message), backgroundColor: Colors.red),
-                      );
+                      await provider.registrarPago(venta.id, monto);
+                    } catch (e) {
+                      messenger.showSnackBar(SnackBar(
+                        content: Text(e is Failure ? e.message : "No se pudo registrar el pago."),
+                        backgroundColor: Colors.red,
+                      ));
                     }
                   },
                   child: const Text("Pagar"),
@@ -130,8 +152,6 @@ class DetalleVentaScreen extends StatelessWidget {
                 children: [
                   // Tarjeta de Resumen Financiero
               Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
@@ -185,7 +205,6 @@ class DetalleVentaScreen extends StatelessWidget {
               
               // Lista de Items
               ...venta.items.map((item) => Card(
-                elevation: 1,
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   title: Text(item.nombre, style: const TextStyle(fontWeight: FontWeight.w600)),

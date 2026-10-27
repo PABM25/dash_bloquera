@@ -4,8 +4,11 @@ import 'package:intl/intl.dart';
 import '../../providers/inventario_provider.dart';
 import '../../models/producto_modelo.dart';
 import 'form_producto_screen.dart';
-import 'escaner_stock_screen.dart';
+import 'escaner_qr_screen.dart';
 import '../../utils/export_util.dart';
+import '../../utils/background_write.dart';
+import '../../widgets/app_shell.dart';
+import '../../widgets/loading_dialog.dart';
 
 class ListaProductosScreen extends StatefulWidget {
   const ListaProductosScreen({super.key});
@@ -23,6 +26,7 @@ class _ListaProductosScreenState extends State<ListaProductosScreen> {
     
     return Scaffold(
       appBar: AppBar(
+        leading: ShellScope.menuButton(context),
         title: const Text('Inventario Maestro'),
         actions: [
           IconButton(
@@ -30,18 +34,21 @@ class _ListaProductosScreenState extends State<ListaProductosScreen> {
             tooltip: 'Exportar CSV',
             onPressed: () async {
               final prodProvider = Provider.of<InventarioProvider>(context, listen: false);
-              final List<Producto> productos = await prodProvider.productosStream.first;
-              if (productos.isNotEmpty) {
-                List<List<dynamic>> rows = [
-                  ["ID", "Nombre", "Descripción", "Stock", "Precio Costo"]
-                ];
-                for (var p in productos) {
-                  rows.add([p.id, p.nombre, p.descripcion ?? "", p.stock, p.precioCosto]);
-                }
-                if (context.mounted) {
-                  await ExportUtil.exportToCSV(context, rows, "inventario_maestro");
-                }
-              }
+              await runWithLoading(
+                context,
+                message: 'Generando reporte…',
+                (close) async {
+                  final List<Producto> productos = await prodProvider.productosStream.first;
+                  if (productos.isEmpty || !context.mounted) return;
+                  List<List<dynamic>> rows = [
+                    ["ID", "Nombre", "Descripción", "Stock", "Precio Costo"]
+                  ];
+                  for (var p in productos) {
+                    rows.add([p.id, p.nombre, p.descripcion ?? "", p.stock, p.precioCosto]);
+                  }
+                  await ExportUtil.exportToCSV(context, rows, "inventario_maestro", onGenerated: close);
+                },
+              );
             },
           )
         ],
@@ -76,8 +83,8 @@ class _ListaProductosScreenState extends State<ListaProductosScreen> {
         children: [
           FloatingActionButton(
             heroTag: "btn_escaner",
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EscanerStockScreen())),
-            backgroundColor: Colors.blueGrey,
+            tooltip: 'Escanear QR',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EscanerQrScreen())),
             child: const Icon(Icons.qr_code_scanner),
           ),
           const SizedBox(height: 16),
@@ -141,7 +148,6 @@ class _ListaProductosScreenState extends State<ListaProductosScreen> {
                     itemBuilder: (context, index) {
                       final prod = productos[index];
                       return Card( // Agregamos un Card para mejor visualización
-                        elevation: 2,
                         margin: const EdgeInsets.only(bottom: 12),
                         child: ListTile(
                       leading: CircleAvatar(
@@ -155,6 +161,7 @@ class _ListaProductosScreenState extends State<ListaProductosScreen> {
                       subtitle: Text("Stock: ${prod.stock} | Costo: ${currency.format(prod.precioCosto)}"),
                       trailing: IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
+                            tooltip: 'Eliminar',
                             onPressed: () => _confirmarEliminar(context, provider, prod),
                           ),
                           onTap: () {
@@ -184,7 +191,11 @@ class _ListaProductosScreenState extends State<ListaProductosScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
           TextButton(
             onPressed: () {
-              provider.deleteProducto(prod.id);
+              guardarEnSegundoPlano(
+                ScaffoldMessenger.of(context),
+                provider.deleteProducto(prod.id),
+                mensajeError: "No se pudo eliminar '${prod.nombre}'.",
+              );
               Navigator.pop(ctx);
             },
             child: const Text("Eliminar", style: TextStyle(color: Colors.red)),

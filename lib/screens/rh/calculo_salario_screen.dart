@@ -4,6 +4,7 @@ import '../../providers/rh_provider.dart';
 import '../../providers/finanzas_provider.dart';
 import '../../models/trabajador_model.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/app_shell.dart';
 
 class CalculoSalarioScreen extends StatefulWidget {
   const CalculoSalarioScreen({super.key});
@@ -22,29 +23,51 @@ class _CalculoSalarioScreenState extends State<CalculoSalarioScreen> {
 
   void _calcular() async {
     if (_trabajadorIdSeleccionado == null || _trabajadorObjeto == null) return;
-    
+    if (_fin.isBefore(_inicio)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("La fecha 'Hasta' debe ser posterior a 'Desde'")));
+      return;
+    }
+
     final provider = Provider.of<RhProvider>(context, listen: false);
-    final res = await provider.calcularSalario(
-      _trabajadorIdSeleccionado!, 
-      _trabajadorObjeto!.salarioPorDia, 
-      _inicio, 
-      _fin
-    );
-    setState(() => _resultado = res);
+    try {
+      final res = await provider.calcularSalario(
+        _trabajadorIdSeleccionado!,
+        _trabajadorObjeto!.salarioPorDia,
+        _inicio,
+        _fin
+      );
+      if (!mounted) return;
+      setState(() => _resultado = res);
+    } catch (e) {
+      debugPrint("Calcular salario: $e");
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No se pudo calcular el salario. Revisa la conexión."), backgroundColor: Colors.red));
+    }
   }
 
   Map<String, dynamic>? _resultado;
+  bool _pagando = false; // Evita registrar el mismo pago dos veces
 
   void _pagar() async {
-    if (_resultado == null || _trabajadorObjeto == null) return;
-    
+    if (_pagando || _resultado == null || _trabajadorObjeto == null) return;
+    setState(() => _pagando = true);
+
     final finanzas = Provider.of<FinanzasProvider>(context, listen: false);
-    await finanzas.registrarPagoSalario(
-      _trabajadorObjeto!.nombre, 
-      _resultado!['total'], 
-      _inicio, 
-      _fin
-    );
+    try {
+      await finanzas.registrarPagoSalario(
+        _trabajadorObjeto!.nombre,
+        _resultado!['total'],
+        _inicio,
+        _fin,
+        tipoProyecto: _trabajadorObjeto!.tipoProyecto,
+      );
+    } catch (e) {
+      debugPrint("Registrar pago salario: $e");
+      if (!mounted) return;
+      setState(() => _pagando = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No se pudo registrar el pago."), backgroundColor: Colors.red));
+      return;
+    }
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Pago registrado en Finanzas"), backgroundColor: Colors.green));
@@ -54,7 +77,7 @@ class _CalculoSalarioScreenState extends State<CalculoSalarioScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Calcular Salarios")),
+      appBar: AppBar(leading: ShellScope.menuButton(context), title: const Text("Calcular Salarios")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -62,9 +85,10 @@ class _CalculoSalarioScreenState extends State<CalculoSalarioScreen> {
             // Selectores de Fecha
             Row(
               children: [
-                Expanded(child: _dateBtn("Desde", _inicio, (d) => setState(() => _inicio = d))),
+                // Cambiar el rango invalida el cálculo anterior (no pagar con datos viejos).
+                Expanded(child: _dateBtn("Desde", _inicio, (d) => setState(() { _inicio = d; _resultado = null; }))),
                 const SizedBox(width: 10),
-                Expanded(child: _dateBtn("Hasta", _fin, (d) => setState(() => _fin = d))),
+                Expanded(child: _dateBtn("Hasta", _fin, (d) => setState(() { _fin = d; _resultado = null; }))),
               ],
             ),
             const SizedBox(height: 20),
@@ -122,7 +146,7 @@ class _CalculoSalarioScreenState extends State<CalculoSalarioScreen> {
               Text("Total a Pagar: ${Formatters.formatCurrency(_resultado!['total'])}", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
               const SizedBox(height: 20),
               ElevatedButton.icon(
-                onPressed: _pagar,
+                onPressed: _pagando ? null : _pagar,
                 icon: const Icon(Icons.attach_money),
                 label: const Text("CONFIRMAR PAGO"),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),

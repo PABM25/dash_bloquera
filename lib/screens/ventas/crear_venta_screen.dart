@@ -33,9 +33,10 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
   final currencyFormat = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
   final dateFormat = DateFormat('dd/MM/yyyy');
 
-  double get subtotalVenta => carrito.fold(0, (sum, item) => sum + item.totalLinea);
-  double get impuesto => subtotalVenta * Provider.of<SettingsProvider>(context, listen: false).taxRate;
-  double get totalVenta => subtotalVenta + impuesto;
+  // Precios netos + IVA: misma fórmula que usa el repositorio al guardar.
+  double get tasaIva => Provider.of<SettingsProvider>(context, listen: false).taxRate;
+  TotalesOrden get totales => TotalesOrden.calcular(carrito, tasaIva);
+  double get totalVenta => totales.total;
 
   Future<void> _seleccionarFecha() async {
     final picked = await showDatePicker(
@@ -220,7 +221,8 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
         rut: _rutCtrl.text,
         direccion: _direccionCtrl.text,
         items: carrito,
-        fecha: _fechaVenta, 
+        fecha: _fechaVenta,
+        tasaIva: tasaIva,
       );
 
       if (!mounted) return;
@@ -254,13 +256,16 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
           final isWide = constraints.maxWidth > 800;
           
           Widget formSection = _buildForm();
-          
+          final t = totales;
+
           Widget ticketSection = TicketPreview(
             cliente: _clienteCtrl.text,
             rut: _rutCtrl.text,
             direccion: _direccionCtrl.text,
             items: carrito,
-            total: totalVenta,
+            neto: t.neto,
+            iva: t.iva,
+            total: t.total,
           );
 
           if (isWide) {
@@ -449,7 +454,6 @@ class _CrearVentaScreenState extends State<CrearVentaScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.kpiGreen,
                 foregroundColor: Colors.white,
-                elevation: 2,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               child: Row(

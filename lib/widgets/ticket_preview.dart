@@ -8,6 +8,8 @@ class TicketPreview extends StatelessWidget {
   final String rut;
   final String direccion;
   final List<ItemOrden> items;
+  final double neto;
+  final double iva;
   final double total;
 
   const TicketPreview({
@@ -16,6 +18,8 @@ class TicketPreview extends StatelessWidget {
     required this.rut,
     required this.direccion,
     required this.items,
+    required this.neto,
+    required this.iva,
     required this.total,
   });
 
@@ -61,7 +65,7 @@ class TicketPreview extends StatelessWidget {
                 height: 60,
                 margin: const EdgeInsets.only(right: 10),
                 child: Image.asset(
-                  'assets/images/Logo.png',
+                  'assets/images/logo_app.png',
                   fit: BoxFit.contain,
                   errorBuilder: (_, _, _) => const Icon(Icons.store, size: 40),
                 ),
@@ -184,7 +188,18 @@ class TicketPreview extends StatelessWidget {
           const SizedBox(height: 10),
           const Divider(color: Colors.black, thickness: 1),
 
-          // 4. Total
+          // 4. Neto, IVA y Total
+          if (iva > 0) ...[
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text("NETO: ${Formatters.formatCurrency(neto)}", style: textStyle),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text("IVA: ${Formatters.formatCurrency(iva)}", style: textStyle),
+            ),
+            const SizedBox(height: 4),
+          ],
           Align(
             alignment: Alignment.centerRight,
             child: Text(

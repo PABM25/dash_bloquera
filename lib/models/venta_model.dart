@@ -19,9 +19,9 @@ class ItemOrden {
     return ItemOrden(
       productoId: map['productoId'] ?? '',
       nombre: map['nombre'] ?? '',
-      cantidad: map['cantidad'] ?? 0,
-      precioUnitario: (map['precio_unitario'] ?? 0).toDouble(),
-      totalLinea: (map['total_linea'] ?? 0).toDouble(),
+      cantidad: (map['cantidad'] as num?)?.toInt() ?? 0,
+      precioUnitario: (map['precio_unitario'] as num?)?.toDouble() ?? 0,
+      totalLinea: (map['total_linea'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -36,6 +36,23 @@ class ItemOrden {
   }
 }
 
+/// Totales de una orden. Los precios unitarios son NETOS y el IVA se suma
+/// encima (redondeado a pesos). La misma fórmula se usa en pantalla, en lo
+/// que se guarda y en los PDF, para que nunca difieran.
+class TotalesOrden {
+  final double neto;
+  final double iva;
+  final double total;
+
+  const TotalesOrden._(this.neto, this.iva, this.total);
+
+  factory TotalesOrden.calcular(Iterable<ItemOrden> items, double tasaIva) {
+    final neto = items.fold(0.0, (acc, i) => acc + i.precioUnitario * i.cantidad);
+    final iva = (neto * tasaIva).roundToDouble();
+    return TotalesOrden._(neto, iva, neto + iva);
+  }
+}
+
 class Venta {
   final String id;
   final String folio; // Ej: OC-2025-0001
@@ -43,7 +60,9 @@ class Venta {
   final String cliente;
   final String? rut;
   final String? direccion;
-  final double total;
+  final double neto;
+  final double iva; // 0 en ventas creadas antes de separar el IVA
+  final double total; // neto + iva
   final double totalCosto; // Para calcular utilidad
   final double totalUtilidad;
   final String estadoPago; // PENDIENTE, ABONADA, PAGADA
@@ -58,6 +77,8 @@ class Venta {
     required this.cliente,
     this.rut,
     this.direccion,
+    double? neto,
+    this.iva = 0,
     required this.total,
     required this.totalCosto,
     required this.totalUtilidad,
@@ -65,28 +86,41 @@ class Venta {
     required this.montoPagado,
     required this.items,
     this.estadoEntrega = 'PENDIENTE',
-  });
+  }) : neto = neto ?? total - iva;
 
   factory Venta.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final double total = (data['total'] as num?)?.toDouble() ?? 0;
+    final double iva = (data['iva'] as num?)?.toDouble() ?? 0;
     return Venta(
       id: doc.id,
       folio: data['folio'] ?? '',
       // Manejo seguro de fechas desde Firestore
-      fecha: (data['fecha'] as Timestamp).toDate(),
+      fecha: (data['fecha'] as Timestamp?)?.toDate() ?? DateTime.now(),
       cliente: data['cliente'] ?? '',
       rut: data['rut'],
       direccion: data['direccion'],
-      total: (data['total'] ?? 0).toDouble(),
-      totalCosto: (data['total_costo'] ?? 0).toDouble(),
-      totalUtilidad: (data['total_utilidad'] ?? 0).toDouble(),
+      neto: (data['neto'] as num?)?.toDouble() ?? total - iva,
+      iva: iva,
+      total: total,
+      totalCosto: (data['total_costo'] as num?)?.toDouble() ?? 0,
+      totalUtilidad: (data['total_utilidad'] as num?)?.toDouble() ?? 0,
       estadoPago: data['estado_pago'] ?? 'PENDIENTE',
-      montoPagado: (data['monto_pagado'] ?? 0).toDouble(),
+      montoPagado: (data['monto_pagado'] as num?)?.toDouble() ?? 0,
       estadoEntrega: data['estado_entrega'] ?? 'PENDIENTE',
       // Convertir la lista de mapas a lista de objetos ItemOrden
       items: (data['items'] as List<dynamic>? ?? [])
           .map((item) => ItemOrden.fromMap(item))
           .toList(),
+    );
+  }
+
+  Venta copyWith({String? estadoEntrega}) {
+    return Venta(
+      id: id, folio: folio, fecha: fecha, cliente: cliente, rut: rut, direccion: direccion,
+      neto: neto, iva: iva, total: total, totalCosto: totalCosto, totalUtilidad: totalUtilidad,
+      estadoPago: estadoPago, montoPagado: montoPagado, items: items,
+      estadoEntrega: estadoEntrega ?? this.estadoEntrega,
     );
   }
 
@@ -97,6 +131,8 @@ class Venta {
       'cliente': cliente,
       'rut': rut,
       'direccion': direccion,
+      'neto': neto,
+      'iva': iva,
       'total': total,
       'total_costo': totalCosto,
       'total_utilidad': totalUtilidad,

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/proveedores_provider.dart';
 import '../../models/proveedor_model.dart';
+import '../../widgets/app_shell.dart';
+import '../../utils/background_write.dart';
+import '../../utils/validators.dart';
 
 class ListaProveedoresScreen extends StatelessWidget {
   const ListaProveedoresScreen({super.key});
@@ -9,7 +12,7 @@ class ListaProveedoresScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Directorio de Proveedores')),
+      appBar: AppBar(leading: ShellScope.menuButton(context), title: const Text('Directorio de Proveedores')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _mostrarDialogoProveedor(context),
         child: const Icon(Icons.add),
@@ -44,11 +47,13 @@ class ListaProveedoresScreen extends StatelessWidget {
                             children: [
                               IconButton(
                                 icon: const Icon(Icons.edit, color: Colors.blue),
+                                tooltip: 'Editar',
                                 onPressed: () => _mostrarDialogoProveedor(context, proveedor: p),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => provider.eliminarProveedor(p.id),
+                                tooltip: 'Eliminar',
+                                onPressed: () => _confirmarEliminar(context, provider, p),
                               ),
                             ],
                           ),
@@ -61,6 +66,28 @@ class ListaProveedoresScreen extends StatelessWidget {
             },
           );
         },
+      ),
+    );
+  }
+
+  void _confirmarEliminar(BuildContext context, ProveedoresProvider provider, Proveedor p) {
+    final messenger = ScaffoldMessenger.of(context);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Eliminar proveedor"),
+        content: Text("¿Seguro que deseas eliminar a ${p.nombre}?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
+          TextButton(
+            onPressed: () {
+              guardarEnSegundoPlano(messenger, provider.eliminarProveedor(p.id),
+                  mensajeError: "No se pudo eliminar el proveedor.");
+              Navigator.pop(ctx);
+            },
+            child: const Text("Eliminar", style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
@@ -83,7 +110,7 @@ class ListaProveedoresScreen extends StatelessWidget {
               TextFormField(
                 controller: nombreCtrl,
                 decoration: const InputDecoration(labelText: "Nombre / Razón Social"),
-                validator: (v) => v!.isEmpty ? "Requerido" : null,
+                validator: Validators.requiredMax(200),
               ),
               TextFormField(
                 controller: rutCtrl,
@@ -103,16 +130,18 @@ class ListaProveedoresScreen extends StatelessWidget {
             onPressed: () {
               if (formKey.currentState!.validate()) {
                 final provider = Provider.of<ProveedoresProvider>(context, listen: false);
-                if (proveedor == null) {
-                  provider.agregarProveedor(nombreCtrl.text.trim(), rutCtrl.text.trim(), contactoCtrl.text.trim());
-                } else {
-                  provider.actualizarProveedor(Proveedor(
-                    id: proveedor.id,
-                    nombre: nombreCtrl.text.trim(),
-                    rut: rutCtrl.text.trim(),
-                    contacto: contactoCtrl.text.trim(),
-                  ));
-                }
+                guardarEnSegundoPlano(
+                  ScaffoldMessenger.of(context),
+                  proveedor == null
+                      ? provider.agregarProveedor(nombreCtrl.text.trim(), rutCtrl.text.trim(), contactoCtrl.text.trim())
+                      : provider.actualizarProveedor(Proveedor(
+                          id: proveedor.id,
+                          nombre: nombreCtrl.text.trim(),
+                          rut: rutCtrl.text.trim(),
+                          contacto: contactoCtrl.text.trim(),
+                        )),
+                  mensajeError: "No se pudo guardar el proveedor.",
+                );
                 Navigator.pop(ctx);
               }
             },

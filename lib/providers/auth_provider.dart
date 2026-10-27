@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import '../utils/shared_stream.dart';
 
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -12,10 +13,16 @@ class AuthProvider with ChangeNotifier {
     // Carga el rol también cuando la sesión se restaura al reabrir la app.
     _authSub = _auth.authStateChanges().listen((user) {
       if (user == null) {
+        // No dejar en memoria datos de la sesión anterior.
+        SharedStream.resetAll();
         _role = null;
         _roleLoaded = true;
         notifyListeners();
       } else {
+        // Marcar "cargando" antes de consultar: si no, la pantalla puede
+        // mostrar un instante "Sin acceso" con el estado del cierre anterior.
+        _roleLoaded = false;
+        notifyListeners();
         fetchUserRole();
       }
     });
@@ -42,9 +49,10 @@ class AuthProvider with ChangeNotifier {
       final doc = await _db.collection('users').doc(user.uid).get();
       final value = doc.data()?['role'];
       _role = value is String ? value : null;
-    } on FirebaseException catch (e) {
-      // Sin perfil o sin permisos: se trata como usuario sin acceso.
-      debugPrint("Error fetching role: ${e.code}");
+    } catch (e) {
+      // Sin perfil, sin permisos u otro error: se trata como usuario sin
+      // acceso (nunca dejar la carga colgada).
+      debugPrint("Error fetching role: $e");
       _role = null;
     }
     _roleLoaded = true;
@@ -57,8 +65,8 @@ class AuthProvider with ChangeNotifier {
     required String password,
   }) async {
     try {
+      // El rol lo carga el listener de authStateChanges.
       await _auth.signInWithEmailAndPassword(email: email, password: password);
-      await fetchUserRole();
       return null;
     } on FirebaseAuthException catch (e) {
       switch (e.code) {
@@ -77,6 +85,10 @@ class AuthProvider with ChangeNotifier {
           debugPrint("Login error: ${e.code}");
           return 'No se pudo iniciar sesión.';
       }
+    } catch (e) {
+      // Ej. fallos de App Check o de plataforma: no dejar el login colgado.
+      debugPrint("Login error: $e");
+      return 'No se pudo iniciar sesión.';
     }
   }
 
@@ -92,7 +104,7 @@ class AuthProvider with ChangeNotifier {
       await user.updateDisplayName(nombre);
       await user.reload();
 
-      // Las reglas solo permiten modificar el propio campo 'nombre'.
+      // Las reglas solo permiten a un ADMIN modificar perfiles (y validan 'nombre').
       await _db.collection('users').doc(user.uid).update({'nombre': nombre});
 
       notifyListeners();

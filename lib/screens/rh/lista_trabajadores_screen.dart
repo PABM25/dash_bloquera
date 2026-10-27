@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import '../../providers/rh_provider.dart';
 import '../../models/trabajador_model.dart';
 import '../../utils/formatters.dart';
+import '../../utils/background_write.dart';
 import 'form_trabajador_screen.dart';
+import '../../widgets/app_shell.dart';
 
 class ListaTrabajadoresScreen extends StatelessWidget {
   const ListaTrabajadoresScreen({super.key});
@@ -11,7 +13,7 @@ class ListaTrabajadoresScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Personal')),
+      appBar: AppBar(leading: ShellScope.menuButton(context), title: const Text('Personal')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FormTrabajadorScreen())),
         child: const Icon(Icons.person_add),
@@ -61,16 +63,18 @@ class ListaTrabajadoresScreen extends StatelessWidget {
   }
 
   void _confirmarEliminar(BuildContext context, RhProvider provider, Trabajador t) {
+    final messenger = ScaffoldMessenger.of(context);
     showDialog(
-      context: context, 
-      builder: (_) => AlertDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
         title: const Text("Eliminar Trabajador"),
         content: Text("¿Seguro que deseas eliminar a ${t.nombre}?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
           TextButton(onPressed: () {
-            provider.deleteTrabajador(t.id);
-            Navigator.pop(context);
+            guardarEnSegundoPlano(messenger, provider.deleteTrabajador(t.id),
+                mensajeError: "No se pudo eliminar a ${t.nombre}.");
+            Navigator.pop(ctx);
           }, child: const Text("Eliminar", style: TextStyle(color: Colors.red))),
         ],
       )

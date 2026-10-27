@@ -21,7 +21,7 @@ class Gasto {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return Gasto(
       id: doc.id,
-      fecha: (data['fecha'] as Timestamp).toDate(),
+      fecha: (data['fecha'] as Timestamp?)?.toDate() ?? DateTime.now(),
       categoria: data['categoria'] ?? 'OTRO',
       descripcion: data['descripcion'] ?? '',
       monto: (data['monto'] ?? 0).toDouble(),

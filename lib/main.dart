@@ -31,6 +31,7 @@ import 'screens/dashboard/home_screen.dart';
 
 // Widgets
 import 'widgets/offline_banner.dart';
+import 'widgets/app_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,20 +87,18 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PresupuestosProvider()), 
         ChangeNotifierProvider(create: (_) => ProveedoresProvider()),
 
-        ProxyProvider<InventarioProvider, ComprasProvider>(
-          update: (_, inv, prev) => ComprasProvider(inv),
-        ),
-
-        ProxyProvider2<VentasProvider, FinanzasProvider, DashboardProvider>(
-          update: (_, ventas, finanzas, prev) =>
-              DashboardProvider(ventas, finanzas),
-        ),
+        // Se crean una sola vez: antes se recreaban (y reabrían sus consultas)
+        // cada vez que Inventario o Ventas notificaban un cambio.
+        ChangeNotifierProvider(create: (_) => ComprasProvider()),
+        Provider(create: (_) => DashboardProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
             title: 'Dash Bloquera',
             debugShowCheckedModeBanner: false,
+            navigatorKey: rootNavigatorKey,
+            navigatorObservers: [ShellRouteObserver()],
             themeMode: themeProvider.themeMode,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
@@ -112,7 +111,8 @@ class MyApp extends StatelessWidget {
               Locale('es', 'ES'),
             ],
             builder: (context, child) {
-              return OfflineBanner(child: child!);
+              // El menú (AppShell) envuelve al Navigator: visible en todas las páginas.
+              return OfflineBanner(child: AppShell(child: child!));
             },
             home: const AuthWrapper(),
           );

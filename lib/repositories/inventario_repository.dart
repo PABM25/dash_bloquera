@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../core/failure.dart';
 import '../models/producto_modelo.dart';
 
 class InventarioRepository {
@@ -96,6 +97,58 @@ class InventarioRepository {
     return Producto.fromFirestore(query.docs.first);
   }
 
+  Future<Producto?> getProductoById(String id) async {
+    final snap = await _db.collection('productos').doc(id).get();
+    if (!snap.exists) return null;
+    return Producto.fromFirestore(snap);
+  }
+
+  // Entrada o salida registrada al escanear el QR de un material.
+  // Transacción: la salida nunca deja el stock negativo. Devuelve el stock nuevo.
+  Future<int> registrarMovimientoQr({
+    required String productoId,
+    required int cantidad,
+    required bool esEntrada,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Failure(message: "Sesión expirada. Vuelve a ingresar.");
+    if (cantidad <= 0) throw Failure(message: "La cantidad debe ser mayor a 0.");
+
+    try {
+      return await _db.runTransaction((transaction) async {
+        final prodRef = _db.collection('productos').doc(productoId);
+        final snap = await transaction.get(prodRef);
+        if (!snap.exists) throw Failure(message: "El material ya no existe.");
+
+        final producto = Producto.fromFirestore(snap);
+        if (!esEntrada && producto.stock < cantidad) {
+          throw Failure(message: "Stock insuficiente. Disponible: ${producto.stock}");
+        }
+        final nuevoStock = producto.stock + (esEntrada ? cantidad : -cantidad);
+
+        transaction.update(prodRef, {'stock': nuevoStock});
+        transaction.set(_db.collection('movimientos_inventario').doc(), {
+          'productoId': productoId,
+          'productoNombre': producto.nombre,
+          'cantidad': cantidad,
+          'tipo': esEntrada ? 'ENTRADA' : 'SALIDA',
+          'motivo': 'ESCANEO_QR',
+          'fecha': FieldValue.serverTimestamp(),
+          'usuarioId': user.uid,
+          'usuarioNombre': user.displayName,
+        });
+        return nuevoStock;
+      });
+    } on FirebaseException catch (e) {
+      throw Failure(
+        message: e.code == 'unavailable'
+            ? "Sin conexión. Esta operación requiere internet."
+            : "No se pudo registrar el movimiento. Intenta nuevamente.",
+        code: e.code,
+      );
+    }
+  }
+
   // Método para añadir stock (Reposición)
   Future<void> agregarStock(
     String productoId,
@@ -106,7 +159,7 @@ class InventarioRepository {
       DocumentReference prodRef = _db.collection('productos').doc(productoId);
       DocumentSnapshot snap = await transaction.get(prodRef);
 
-      if (!snap.exists) return;
+      if (!snap.exists) throw Failure(message: "El producto $nombre ya no existe.");
       int stockActual = (snap.get('stock') as num?)?.toInt() ?? 0;
 
       transaction.update(prodRef, {'stock': stockActual + cantidad});
@@ -124,53 +177,5 @@ class InventarioRepository {
         'usuarioNombre': _auth.currentUser?.displayName,
       });
     });
-  }
-
-  // NUEVO METODO MOVIDO DESDE EL PROVIDER
-  Future<void> registrarProduccionBloquero({
-    required String productoId,
-    required String productoNombre,
-    required int cantidad,
-    required DateTime fecha,
-  }) async {
-    final user = _auth.currentUser;
-    if (user == null) throw "Usuario no identificado";
-
-    WriteBatch batch = _db.batch();
-
-    // 1. Referencias
-    final prodRef = _db.collection('productos').doc(productoId);
-    final prodRecordRef = _db.collection('registros_produccion').doc();
-    final kardexRef = _db.collection('movimientos_inventario').doc();
-
-    // 2. Operaciones
-    // A: Incrementar Stock
-    batch.update(prodRef, {
-      'stock': FieldValue.increment(cantidad),
-    });
-
-    // B: Registro para nómina
-    batch.set(prodRecordRef, {
-      'trabajadorId': user.uid,
-      'trabajadorNombre': user.displayName ?? 'Trabajador',
-      'productoId': productoId,
-      'productoNombre': productoNombre,
-      'cantidad': cantidad,
-      'fecha': Timestamp.fromDate(fecha),
-      'pagoProcesado': false,
-    });
-
-    // C: Kardex
-    batch.set(kardexRef, {
-      'productoId': productoId,
-      'productoNombre': productoNombre,
-      'cantidad': cantidad,
-      'tipo': 'ENTRADA',
-      'motivo': 'PRODUCCION_INTERNA',
-      'fecha': FieldValue.serverTimestamp(),
-      'usuarioId': user.uid,
-    });
-
-    await batch.commit();
   }
 }

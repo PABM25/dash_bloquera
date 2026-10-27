@@ -1,12 +1,16 @@
 import 'package:flutter/foundation.dart';
 import '../models/producto_modelo.dart';
 import '../repositories/inventario_repository.dart';
+import '../utils/shared_stream.dart';
 
 class InventarioProvider with ChangeNotifier {
   final InventarioRepository _repository = InventarioRepository();
 
-  Stream<List<Producto>> get productosStream =>
-      _repository.getProductosStream();
+  // Una sola consulta compartida por todas las pantallas (ver SharedStream).
+  late final SharedStream<List<Producto>> _productos =
+      SharedStream(_repository.getProductosStream);
+
+  Stream<List<Producto>> get productosStream => _productos.stream;
 
   Future<void> addProducto(
     String nombre,
@@ -33,23 +37,22 @@ class InventarioProvider with ChangeNotifier {
     return await _repository.getProductoByBarcode(barcode);
   }
 
-  Future<void> reponerStock(Producto p, int cantidad) async {
-    await _repository.agregarStock(p.id, p.nombre, cantidad);
-    notifyListeners();
+  Future<Producto?> buscarProductoPorId(String id) async {
+    return await _repository.getProductoById(id);
   }
 
-  // Método limpiado: Ahora solo delega al repositorio
-  Future<void> registrarProduccionBloquero({
-    required Producto producto,
-    required int cantidad,
-    required DateTime fecha,
-  }) async {
-    await _repository.registrarProduccionBloquero(
-      productoId: producto.id,
-      productoNombre: producto.nombre,
+  Future<int> registrarMovimientoQr(Producto p, int cantidad, {required bool esEntrada}) async {
+    final nuevoStock = await _repository.registrarMovimientoQr(
+      productoId: p.id,
       cantidad: cantidad,
-      fecha: fecha,
+      esEntrada: esEntrada,
     );
+    notifyListeners();
+    return nuevoStock;
+  }
+
+  Future<void> reponerStock(Producto p, int cantidad) async {
+    await _repository.agregarStock(p.id, p.nombre, cantidad);
     notifyListeners();
   }
 }

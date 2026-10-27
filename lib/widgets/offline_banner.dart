@@ -11,11 +11,14 @@ class OfflineBanner extends StatefulWidget {
 
 class _OfflineBannerState extends State<OfflineBanner> {
   late Future<List<ConnectivityResult>> _initialCheck;
+  // Se crea una vez: en build() se volvería a suscribir en cada redibujado.
+  late final Stream<List<ConnectivityResult>> _changes;
 
   @override
   void initState() {
     super.initState();
     _initialCheck = Connectivity().checkConnectivity();
+    _changes = Connectivity().onConnectivityChanged;
   }
 
   @override
@@ -29,7 +32,7 @@ class _OfflineBannerState extends State<OfflineBanner> {
         }
 
         return StreamBuilder<List<ConnectivityResult>>(
-          stream: Connectivity().onConnectivityChanged,
+          stream: _changes,
           initialData: futureSnapshot.data,
           builder: (context, snapshot) {
             final results = snapshot.data ?? [ConnectivityResult.none];
